@@ -681,7 +681,7 @@
  	}
  </style>
 <style>
-/* Layout: carte plein écran, panneau latéral (bas d'écran sur téléphone), orange de sécurité comme seul accent */
+/* Layout: carte plein écran, bandeau du nom en haut, 4 boutons carrés, bouton Menu en bas à gauche qui ouvre le volet ; orange de sécurité comme seul accent */
 :root {
   --bg: #eef0e8;
   --panel: #fbfbf7;
@@ -714,35 +714,83 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--blaze); outline-offset: 2px; }
 
-.app { height: 100%; display: grid; grid-template-columns: 1fr 360px; }
+.app { height: 100%; position: relative; }
 #map { height: 100%; background: var(--map-fallback); }
 #map.no-tiles { background:
   repeating-linear-gradient(45deg, transparent 0 22px, rgba(255,255,255,.04) 22px 23px), var(--map-fallback); }
 
-/* barre d'outils flottante */
-.tools { position: absolute; z-index: 500; top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px));
-  display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 400px); }
-.tbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel);
-  padding: 8px 12px; border-radius: 6px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
-.tbtn.on { background: var(--blaze); color: var(--blaze-ink); border-color: var(--blaze); }
-.tbtn svg { width: 16px; height: 16px; }
+/* bandeau du nom de l'appli */
+.topbar { position: absolute; z-index: 520; top: calc(10px + env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 10px; background: #1f2a1c; color: #fff; border-radius: 10px; padding: 8px 8px 8px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.brand i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #e8591a; margin-right: 8px; vertical-align: 1px; }
+.tb-chip { margin-left: auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); color: #fff;
+  border-radius: 99px; padding: 5px 12px; font-weight: 600; font-size: 13px; }
+.tb-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-chip b { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 
-.drawbar { position: absolute; z-index: 600; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+/* les 4 boutons carrés */
+.tools { position: absolute; z-index: 500; top: calc(66px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px));
+  display: flex; gap: 6px; }
+.tbtn { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--panel);
+  border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25); padding: 0; }
+.tbtn.on { background: var(--blaze); color: var(--blaze-ink); border-color: var(--blaze); }
+.tbtn svg { width: 18px; height: 18px; }
+.tbtn span { display: none; }
+
+/* bouton Menu */
+.menu-btn { position: absolute; z-index: 560; left: max(14px, env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: 8px; height: 52px; padding: 0 18px 0 14px; border: 0; border-radius: 14px;
+  background: #1f2a1c; color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 3px 10px rgba(0,0,0,.4); }
+.menu-btn svg { width: 22px; height: 22px; }
+.badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #e8591a; color: #fff; font-family: var(--font-mono); font-size: 11px; display: grid; place-items: center; letter-spacing: 0; }
+
+/* volet */
+.scrim { position: fixed; inset: 0; z-index: 880; background: rgba(10,14,8,.45); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; z-index: 890; top: 0; bottom: 0; left: 0; width: min(390px, 90vw); transform: translateX(-102%); transition: transform .25s ease;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); box-shadow: 4px 0 20px rgba(0,0,0,.35); }
+.drawer.open { transform: none; }
+@media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
+.dclose { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; width: 36px; height: 36px; border: 1px solid var(--line); background: transparent; border-radius: 8px; font-size: 18px; line-height: 1; }
+.obtn { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 4px 8px; }
+.obtn .btn { padding: 10px 8px; font-size: 14px; }
+.subh { font-family: var(--font-display); font-size: 17px; text-transform: uppercase; letter-spacing: .06em; margin: 14px 8px 2px; color: var(--muted); }
+.bird { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #2f6f8f; color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.mk-spot { width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #2f6f8f; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.6); display: grid; place-items: center; }
+.mk-spot svg { width: 14px; height: 14px; transform: rotate(45deg); }
+details.especes-list { margin: 10px 4px 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+details.especes-list summary { font-weight: 600; cursor: pointer; }
+details.especes-list h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 4px; }
+details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
+.set { display: grid; gap: 10px; padding: 6px 8px 14px; }
+.set + .set { border-top: 1px solid var(--line); padding-top: 14px; }
+.set h3 { font-family: var(--font-display); font-size: 18px; text-transform: uppercase; letter-spacing: .06em; margin: 0; }
+.set .hint { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 0; }
+.set .line { display: flex; gap: 8px; flex-wrap: wrap; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--blaze); }
+.info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+.info dt { color: var(--muted); }
+.info dd { margin: 0; }
+
+.drawbar { position: absolute; z-index: 600; white-space: normal; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   background: var(--ink); color: var(--panel); padding: 8px 10px 8px 14px; border-radius: 8px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: calc(100% - 32px); }
 .drawbar button { border: 0; padding: 6px 12px; border-radius: 5px; font-weight: 600; background: var(--blaze); color: var(--blaze-ink); }
 .drawbar button.ghost { background: transparent; color: var(--panel); border: 1px solid currentColor; }
 
-.notice { position: absolute; z-index: 550; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  max-width: 340px; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--blaze); padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+.notice { position: absolute; z-index: 550; left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  max-width: min(340px, calc(100% - 80px)); background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--blaze); padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
 
 /* panneau */
-.panel { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-.ph { padding-block: 16px 10px; padding-left: 18px; padding-right: max(18px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
-.ph h1 { font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.ph { padding-block: 16px 10px; padding-left: 16px; padding-right: max(18px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
+.ph h1 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: .01em; margin: 0 44px 0 0; text-wrap: balance; }
 .ph .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
-.tabs { display: flex; gap: 4px; margin-top: 12px; }
-.tab { flex: 1; border: 1px solid var(--line); background: transparent; padding: 7px 4px; border-radius: 5px;
-  font-family: var(--font-display); font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 12px; }
+.tab { flex: 1; min-width: 0; border: 1px solid var(--line); background: transparent; padding: 7px 2px; border-radius: 5px;
+  font-family: var(--font-display); font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 .tab[aria-selected="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 .tab .n { font-family: var(--font-mono); font-size: 12px; opacity: .7; margin-left: 4px; }
 .pb { overflow-y: auto; padding-block: 10px 24px; padding-left: 12px; padding-right: max(12px, env(safe-area-inset-right, 0px)); flex: 1; min-height: 0; }
@@ -817,23 +865,15 @@ button { cursor: pointer; }
 .leaflet-container { font-family: var(--font-body); }
 .leaflet-control-attribution { font-size: 10px; }
 
-@media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 58% 42%; }
-  .panel { border-left: 0; border-top: 1px solid var(--line); }
-  .ph { padding-block: 10px 8px; }
-  .ph h1 { font-size: 21px; }
-  .ph .sub { display: none; }
-  .tabs { margin-top: 8px; }
-  .tools { max-width: calc(100% - 24px); }
-  .tbtn span { display: none; }
-  .tbtn { padding: 9px; }
-  .notice { right: 60px; max-width: none; }
-}
 </style>
 
 <div class="app">
-  <div style="position:relative;min-height:0">
+  <div style="position:relative;height:100%">
     <div id="map" aria-label="Carte du territoire"></div>
+    <div class="topbar">
+      <span class="brand"><i></i>Carnet de battue</span>
+      <button class="tb-chip" id="topBattue" title="Choisir la battue"><b id="topSw"></b><span id="topBattueLbl">Choisir une battue</span></button>
+    </div>
     <div class="tools" role="toolbar" aria-label="Outils de carte">
       <button class="tbtn" id="btnPoste" title="Placer un poste">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg><span>Poste</span></button>
@@ -850,9 +890,13 @@ button { cursor: pointer; }
       <button class="ghost" id="drawCancel">Annuler</button>
     </div>
     <div class="notice" id="notice" hidden></div>
+    <button class="menu-btn" id="btnMenu" aria-controls="drawer" aria-expanded="false">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>Menu<span class="badge" id="menuBadge" hidden></span></button>
   </div>
+  <div class="scrim" id="scrim"></div>
 
-  <aside class="panel">
+  <aside class="panel drawer" id="drawer" aria-label="Menu">
+    <button class="dclose" id="btnClose" aria-label="Fermer le menu">✕</button>
     <div class="ph">
       <h1 id="terrName">Territoire de la Rouvière</h1>
       <div class="sub">Version d'essai. Les données restent sur ce téléphone.</div>
@@ -860,13 +904,11 @@ button { cursor: pointer; }
         <button class="tab" role="tab" id="tab-battue" aria-selected="true">Battue<span class="n" id="nBattues"></span></button>
         <button class="tab" role="tab" id="tab-drailles" aria-selected="false">Drailles<span class="n" id="nDrailles"></span></button>
         <button class="tab" role="tab" id="tab-direct" aria-selected="false">Direct<span class="n" id="nDirect"></span></button>
+        <button class="tab" role="tab" id="tab-oiseaux" aria-selected="false">Oiseaux<span class="n" id="nOiseaux"></span></button>
+        <button class="tab" role="tab" id="tab-reglages" aria-selected="false">Réglages</button>
       </div>
     </div>
     <div class="pb" id="list"></div>
-    <div class="foot">
-      <button id="btnCopy">Copier les données</button>
-      <button id="btnReset">Revenir à l'exemple</button>
-    </div>
   </aside>
 </div>
 
@@ -881,13 +923,20 @@ const KEY = 'carnet-battue-v2';
 const ZONE_COLORS = ['#ff8a3d', '#4fc3f7', '#c5e86c', '#f48fb1', '#ffd54f'];
 const GIBIER = { sanglier: '#e8591a', renard: '#ff8fa3', chevreuil: '#f2c14e', chevrette: '#f7d97c', brocard: '#d9a520', cerf: '#c77dff', biche: '#dcb3ff', faon: '#e6c9a8', chamois: '#7fd1ae', autre: '#ffffff' };
 // espèces proposées au poste pour « Animal vu » ; f = féminin (« vue »)
+// oiseaux chassables en France (liste indicative, sans les espèces sous moratoire comme la tourterelle des bois)
+const OISEAUX = [
+  { g: 'Gibier sédentaire', l: ['Faisan de chasse', 'Faisan vénéré', 'Perdrix grise', 'Perdrix rouge', 'Perdrix bartavelle', 'Colin de Virginie', 'Gélinotte des bois', 'Lagopède alpin', 'Tétras lyre'] },
+  { g: 'Oiseaux de passage', l: ['Bécasse des bois', 'Pigeon ramier', 'Pigeon colombin', 'Pigeon biset', 'Tourterelle turque', 'Grive musicienne', 'Grive draine', 'Grive litorne', 'Grive mauvis', 'Merle noir', 'Alouette des champs', 'Caille des blés'] },
+  { g: 'Gibier d\'eau', l: ['Canard colvert', 'Canard chipeau', 'Canard pilet', 'Canard siffleur', 'Canard souchet', 'Sarcelle d\'hiver', 'Sarcelle d\'été', 'Fuligule milouin', 'Fuligule morillon', 'Fuligule milouinan', 'Nette rousse', 'Garrot à œil d\'or', 'Eider à duvet', 'Harelde boréale', 'Macreuse brune', 'Macreuse noire', 'Oie cendrée', 'Oie des moissons', 'Oie rieuse', 'Foulque macroule', 'Poule d\'eau', 'Râle d\'eau', 'Bécassine des marais', 'Bécassine sourde', 'Vanneau huppé', 'Pluvier doré', 'Pluvier argenté', 'Barge rousse', 'Bécasseau maubèche', 'Chevalier aboyeur', 'Chevalier arlequin', 'Chevalier combattant', 'Chevalier gambette', 'Courlis corlieu', 'Huîtrier pie'] },
+  { g: 'Corvidés et autres', l: ['Corbeau freux', 'Corneille noire', 'Pie bavarde', 'Geai des chênes', 'Étourneau sansonnet'] }
+];
+const SPOT_TYPES = ['Plaine', 'Bois', 'Marais', 'Étang', 'Passage de migrateurs', 'Autre'];
 const ESPECES = [
   { id: 'sanglier', nom: 'Sanglier' }, { id: 'renard', nom: 'Renard' },
   { id: 'chevreuil', nom: 'Chevreuil' }, { id: 'chevrette', nom: 'Chevrette', f: true }, { id: 'brocard', nom: 'Brocard' },
   { id: 'cerf', nom: 'Cerf' }, { id: 'biche', nom: 'Biche', f: true }, { id: 'faon', nom: 'Faon' },
   { id: 'chamois', nom: 'Chamois' }, { id: 'autre', nom: 'Autre animal' }
 ];
-const SAFETY_DEG = 30; // règle des 30° : on ne tire pas à moins de 30° d'un poste voisin
 
 // ---------- données d'exemple ----------
 const C = [44.0342, 3.8915];
@@ -921,6 +970,17 @@ function sample() {
       { id: 'd3', nom: 'Sortie vers les châtaigniers', gibier: 'sanglier', notes: 'Remise probable dans le roncier nord.',
         pts: [[44.0298,3.8870],[44.0302,3.8910],[44.0300,3.8952],[44.0286,3.8990]] }
     ],
+    oiseaux: {
+      spots: [
+        { id: 's1', nom: 'Étang des Cayrols', type: 'Étang', lat: 44.0252, lng: 3.9065, notes: 'Affût à l\'aube, côté roseaux.' },
+        { id: 's2', nom: 'Lisière des châtaigniers', type: 'Bois', lat: 44.0300, lng: 3.8850, notes: 'Bécasses à la première gelée.' }
+      ],
+      prises: [
+        { id: 'o1', espece: 'Canard colvert', nb: 2, date: '2026-10-18', spot: 's1', notes: '' },
+        { id: 'o2', espece: 'Bécasse des bois', nb: 1, date: '2026-10-24', spot: 's2', notes: 'Levée par le chien près du ruisseau.' },
+        { id: 'o3', espece: 'Grive musicienne', nb: 3, date: '2026-10-25', spot: 's2', notes: '' }
+      ]
+    },
     routes: [ { nom: 'D 907', pts: [[44.0274,3.8800],[44.0281,3.8870],[44.0277,3.8940],[44.0266,3.9010],[44.0258,3.9080]] },
               { nom: 'Voie ferrée', pts: [[44.0430,3.8790],[44.0425,3.8900],[44.0432,3.9010],[44.0440,3.9090]] } ]
   };
@@ -929,11 +989,19 @@ let S;
 try { S = JSON.parse(localStorage.getItem(KEY)) || sample(); } catch (e) { S = sample(); }
 if (!S.routes) S.routes = sample().routes;
 if (!S.battues) S = sample();
+// réglages : angle de sécurité (règle des 30° par défaut), portée du cône dessiné, fond au démarrage
+S.reglages = Object.assign({ angle: 30, portee: 120, fond: 0, routes: true }, S.reglages);
+if (!S.oiseaux) S.oiseaux = sample().oiseaux;
+S.compte = Object.assign({ nom: '', societe: '', tel: '' }, S.compte);
+const VERSION = '0.4 · 27 octobre 2026';
 const B = () => S.battues.find(b => b.id === S.cur) || null;
 const P = () => B() ? B().postes : [];
 const events = [], vus = [];
+let unread = 0;
 function logEv(kind, html) { const t = new Date(); events.unshift({ kind, html, t: t.toTimeString().slice(0,5) }); if (events.length > 60) events.pop();
-  document.getElementById('nDirect').textContent = events.length; if (tab === 'direct') renderList(); }
+  document.getElementById('nDirect').textContent = events.length;
+  if (tab === 'direct' && drawer && drawer.classList.contains('open')) renderList(); else if (kind !== 'info') unread++;
+  const bd = document.getElementById('menuBadge'); bd.textContent = unread; bd.hidden = !unread; }
 // les clés en _ (calques Leaflet) ne sont pas des données : on les exclut
 const toJSON = () => JSON.stringify(S, (k, v) => k.startsWith('_') ? undefined : v);
 function save() { try { localStorage.setItem(KEY, toJSON()); } catch (e) { notice('Sauvegarde impossible sur cet appareil (espace plein ou navigation privée). Les modifications seront perdues à la fermeture.'); } }
@@ -947,10 +1015,11 @@ const FONDS = [
   { nom: 'Plan IGN', l: L.tileLayer(ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png'), { maxZoom: 20, maxNativeZoom: 18, attribution: '© IGN Géoplateforme' }) },
   { nom: 'Satellite monde', l: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 19, attribution: 'Imagerie © Esri' }) }
 ];
-let fondIdx = 0, tilesOk = 0, tilesErr = 0;
+let tilesOk = 0, tilesErr = 0;
 FONDS.forEach(f => { f.l.on('tileload', () => { tilesOk++; document.getElementById('map').classList.remove('no-tiles'); });
                      f.l.on('tileerror', () => { tilesErr++; if (!tilesOk && tilesErr > 4) tileWarn(); }); });
-FONDS[0].l.addTo(map);
+let fondIdx0 = Math.min(S.reglages.fond, FONDS.length - 1);
+FONDS[fondIdx0].l.addTo(map);
 setTimeout(() => { if (!tilesOk) tileWarn(); }, 4000);
 function tileWarn() {
   document.getElementById('map').classList.add('no-tiles');
@@ -959,7 +1028,7 @@ function tileWarn() {
 function notice(t) { const n = document.getElementById('notice'); n.textContent = t + ' (touchez pour fermer)'; n.hidden = false; n.onclick = () => n.hidden = true; }
 
 const gRoutes = L.layerGroup().addTo(map), gVus = L.layerGroup().addTo(map);
-const gZones = L.layerGroup().addTo(map);
+const gZones = L.layerGroup().addTo(map), gSpots = L.layerGroup().addTo(map);
 const gPostes = L.layerGroup().addTo(map), gSect = L.layerGroup().addTo(map), gDr = L.layerGroup().addTo(map);
 
 // géodésie simple (petites distances)
@@ -978,7 +1047,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 // Un poste est en conflit si un voisin se trouve dans son secteur de tir élargi de 30° de chaque côté
 function conflits(p) {
   return P().filter(q => q.id !== p.id && dist([p.lat,p.lng],[q.lat,q.lng]) < 400 &&
-    angDiff(bearing([p.lat,p.lng],[q.lat,q.lng]), p.orient) < p.ouv/2 + SAFETY_DEG);
+    angDiff(bearing([p.lat,p.lng],[q.lat,q.lng]), p.orient) < p.ouv/2 + S.reglages.angle);
 }
 
 function drawPostes() {
@@ -986,7 +1055,7 @@ function drawPostes() {
   P().forEach(p => {
     const c = conflits(p);
     const pts = [[p.lat,p.lng]];
-    for (let a = p.orient - p.ouv/2; a <= p.orient + p.ouv/2 + .01; a += 5) pts.push(dest([p.lat,p.lng], a, 120));
+    for (let a = p.orient - p.ouv/2; a <= p.orient + p.ouv/2 + .01; a += 5) pts.push(dest([p.lat,p.lng], a, S.reglages.portee));
     L.polygon(pts, { color: c.length ? '#ff5a4f' : '#ff8a3d', weight: 1.5, fillOpacity: .18, dashArray: c.length ? '4 4' : null, interactive: false }).addTo(gSect);
     const m = L.marker([p.lat,p.lng], { draggable: true, icon: L.divIcon({ className: '', html: '<div class="mk-poste' + (c.length ? ' alert' : '') + '">' + p.num + '</div>', iconSize: [30,30], iconAnchor: [15,15] }) });
     m.bindPopup(() => popPoste(p), { maxWidth: 260, autoPanPaddingTopLeft: L.point(12, 70) });
@@ -1031,7 +1100,7 @@ function animalVu(p, brg, lbl, esp = ESPECES[0]) {
   // postes vers lesquels l'animal se dirige (à moins de 35° de sa course, sous 700 m)
   const cibles = P().filter(q => q.id !== p.id && dist(a, [q.lat,q.lng]) < 700 && angDiff(bearing(a, [q.lat,q.lng]), brg) < 35).map(q => q.num);
   logEv('vu', '<b>Poste ' + p.num + ' : ' + esp.nom.toLowerCase() + (esp.f ? ' vue' : ' vu') + '</b>, part vers ' + DIRS[lbl] + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''));
-  tab = 'direct'; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.id === 'tab-direct')); renderList();
+  notice(esp.nom + ' signalé' + (esp.f ? 'e' : '') + (cibles.length ? ' aux postes ' + cibles.join(', ') : '') + '. Détail dans Menu › Direct.');
 }
 function drawDrailles() {
   gDr.clearLayers();
@@ -1060,11 +1129,92 @@ function drawZones() {
     b._z = z;
   });
 }
+// ---------- chasse aux oiseaux ----------
+const spotById = id => S.oiseaux.spots.find(x => x.id === id);
+const prisesDu = sp => S.oiseaux.prises.filter(o => o.spot === sp.id);
+const today = () => new Date().toISOString().slice(0, 10);
+const fmtDate = d => d ? d.split('-').reverse().join('/') : '';
+const BIRD_SVG = '<svg viewBox="0 0 16 16" fill="#fff"><path d="M1 9c2-1 4-1 5 0 1-3 4-5 8-5-1 1-2 2-2 4 0 3-3 5-7 5-2 0-3-1-4-2l-2 1z"/></svg>';
+function drawSpots() {
+  gSpots.clearLayers();
+  S.oiseaux.spots.forEach(sp => {
+    const m = L.marker([sp.lat, sp.lng], { draggable: true, icon: L.divIcon({ className: '', html: '<div class="mk-spot">' + BIRD_SVG + '</div>', iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -26] }) });
+    m.bindPopup(() => {
+      const d = document.createElement('div'); d.className = 'pop'; const pr = prisesDu(sp);
+      d.innerHTML = '<h3>' + esc(sp.nom) + '</h3><div class="m">' + esc(sp.type) + ' · ' + pr.reduce((n, o) => n + o.nb, 0) + ' prise' + (pr.reduce((n, o) => n + o.nb, 0) > 1 ? 's' : '') + (sp.notes ? '<br>' + esc(sp.notes) : '') + '</div>';
+      const a = document.createElement('button'); a.type = 'button'; a.textContent = 'Ajouter une prise ici'; a.onclick = () => { map.closePopup(); editPrise({ id: 'o' + Date.now(), espece: OISEAUX[1].l[0], nb: 1, date: today(), spot: sp.id, notes: '' }, true); };
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Modifier'; b.style.marginLeft = '6px'; b.onclick = () => { map.closePopup(); editSpot(sp); };
+      d.appendChild(a); d.appendChild(b); return d;
+    }, { autoPanPaddingTopLeft: L.point(12, 70) });
+    m.on('dragend', e => { const ll = e.target.getLatLng(); sp.lat = ll.lat; sp.lng = ll.lng; save(); });
+    m.addTo(gSpots); sp._m = m;
+  });
+}
+function renderOiseaux(el) {
+  const pr = S.oiseaux.prises, sps = S.oiseaux.spots, total = pr.reduce((n, o) => n + o.nb, 0);
+  el.insertAdjacentHTML('beforeend', '<div class="section-note">' + total + ' oiseau' + (total > 1 ? 'x' : '') + ' prélevé' + (total > 1 ? 's' : '') + ' cette saison sur ' + sps.length + ' spot' + (sps.length > 1 ? 's' : '') + '. Les exemples sont modifiables.</div>');
+  const bt = document.createElement('div'); bt.className = 'obtn';
+  bt.innerHTML = '<button type="button" class="btn primary" id="btnPrise">+ Ajouter une prise</button><button type="button" class="btn" id="btnSpot">+ Placer un spot</button>';
+  el.appendChild(bt);
+  bt.querySelector('#btnPrise').onclick = () => editPrise({ id: 'o' + Date.now(), espece: OISEAUX[1].l[0], nb: 1, date: today(), spot: sps[0] ? sps[0].id : '', notes: '' }, true);
+  bt.querySelector('#btnSpot').onclick = () => startDraw('spot');
+  el.insertAdjacentHTML('beforeend', '<div class="subh">Mes prises</div>');
+  if (!pr.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Aucune prise enregistrée.</div>');
+  [...pr].sort((a, b) => b.date.localeCompare(a.date)).forEach(o => {
+    const sp = spotById(o.spot);
+    const r = row('<div class="bird">' + o.nb + '</div>', esc(o.espece), fmtDate(o.date) + (sp ? ' · ' + esc(sp.nom) : ''), '');
+    r.onclick = () => editPrise(o);
+    el.appendChild(r);
+  });
+  el.insertAdjacentHTML('beforeend', '<div class="subh">Mes spots</div>');
+  if (!sps.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Aucun spot. Touchez « Placer un spot » puis la carte.</div>');
+  sps.forEach(sp => {
+    const n = prisesDu(sp).reduce((k, o) => k + o.nb, 0);
+    const r = row('<div class="bird" style="border-radius:50% 50% 50% 0">' + BIRD_SVG.replace('<svg', '<svg style="width:20px;height:20px"') + '</div>', esc(sp.nom), esc(sp.type), n + ' prise' + (n > 1 ? 's' : ''));
+    r.onclick = () => { closeDrawer(); map.setView([sp.lat, sp.lng], Math.max(map.getZoom(), 16)); sp._m.openPopup(); };
+    el.appendChild(r);
+  });
+  el.insertAdjacentHTML('beforeend', '<details class="especes-list"><summary>Espèces d\'oiseaux chassables</summary>' +
+    OISEAUX.map(g => '<h4>' + g.g + '</h4><p>' + g.l.join(', ') + '</p>').join('') +
+    '<p class="hint" style="margin-top:10px;color:var(--muted);font-size:13px">Liste indicative pour la France. Dates d\'ouverture, quotas et moratoires changent selon les départements et les années : vérifiez l\'arrêté de votre préfecture. Les corvidés et l\'étourneau dépendent du classement local.</p></details>');
+}
+function editPrise(o, isNew) {
+  const sps = S.oiseaux.spots;
+  openSheet('<h2>' + (isNew ? 'Nouvelle prise' : 'Prise') + '</h2>' +
+    '<div class="field"><label for="f-oe">Espèce</label><select id="f-oe" name="espece">' + OISEAUX.map(g => '<optgroup label="' + g.g.replace(/"/g, '') + '">' + g.l.map(n => '<option' + (n === o.espece ? ' selected' : '') + '>' + n + '</option>').join('') + '</optgroup>').join('') + '</select></div>' +
+    '<div class="two"><div class="field"><label for="f-onb">Nombre</label><input id="f-onb" name="nb" type="number" min="1" max="99" value="' + o.nb + '" required></div>' +
+    '<div class="field"><label for="f-od">Date</label><input id="f-od" name="date" type="date" value="' + o.date + '" required></div></div>' +
+    '<div class="field"><label for="f-os">Spot</label><select id="f-os" name="spot"><option value="">Aucun spot</option>' + sps.map(sp => '<option value="' + sp.id + '"' + (sp.id === o.spot ? ' selected' : '') + '>' + esc(sp.nom) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="f-on">Notes</label><textarea id="f-on" name="notes" placeholder="Météo, chien, conditions…">' + esc(o.notes) + '</textarea></div>' +
+    '<div class="actions">' + (isNew ? '<span></span>' : '<button type="button" class="btn danger" data-del>Supprimer</button>') +
+    '<span style="display:flex;gap:8px"><button type="button" class="btn" data-cancel>Annuler</button><button class="btn primary">Enregistrer</button></span></div>',
+    fd => { Object.assign(o, { espece: fd.get('espece'), nb: Math.max(1, +fd.get('nb') || 1), date: fd.get('date') || today(), spot: fd.get('spot'), notes: fd.get('notes') });
+      if (isNew) S.oiseaux.prises.push(o); save(); render(); },
+    () => { S.oiseaux.prises = S.oiseaux.prises.filter(x => x !== o); save(); render(); });
+}
+function editSpot(sp, isNew) {
+  openSheet('<h2>' + (isNew ? 'Nouveau spot' : esc(sp.nom)) + '</h2>' +
+    '<div class="field"><label for="f-sn">Nom du spot</label><input id="f-sn" name="nom" value="' + esc(sp.nom) + '" required></div>' +
+    '<div class="field"><label for="f-st">Type</label><select id="f-st" name="type">' + SPOT_TYPES.map(t => '<option' + (t === sp.type ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="f-sno">Notes</label><textarea id="f-sno" name="notes" placeholder="Accès, meilleur moment, vent…">' + esc(sp.notes) + '</textarea></div>' +
+    '<div class="actions">' + (isNew ? '<span></span>' : '<button type="button" class="btn danger" data-del>Supprimer le spot</button>') +
+    '<span style="display:flex;gap:8px"><button type="button" class="btn" data-cancel>Annuler</button><button class="btn primary">Enregistrer</button></span></div>',
+    fd => { Object.assign(sp, { nom: fd.get('nom'), type: fd.get('type'), notes: fd.get('notes') }); if (isNew) S.oiseaux.spots.push(sp); save(); render(); },
+    () => { S.oiseaux.spots = S.oiseaux.spots.filter(x => x !== sp); S.oiseaux.prises.forEach(o => { if (o.spot === sp.id) o.spot = ''; }); save(); render(); });
+}
+function setTab(t) { tab = t; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.id === 'tab-' + t)); if (t === 'direct') unread = 0; renderList(); }
+const drawer = document.getElementById('drawer'), scrim = document.getElementById('scrim'), menuBtn = document.getElementById('btnMenu');
+function openDrawer(t) { if (t) setTab(t); else renderList(); drawer.classList.add('open'); scrim.classList.add('open'); menuBtn.setAttribute('aria-expanded', 'true'); }
+function closeDrawer() { drawer.classList.remove('open'); scrim.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); }
+menuBtn.onclick = () => openDrawer();
+scrim.onclick = closeDrawer;
+document.getElementById('btnClose').onclick = closeDrawer;
+document.getElementById('topBattue').onclick = () => openDrawer('battue');
 function selectBattue(id, fit) {
   S.cur = id; save(); tab = 'battue'; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.id === 'tab-battue'));
   render(); if (fit && B()) map.fitBounds(B()._z.getBounds(), { padding: [30, 30] });
 }
-function drawRoutes() { gRoutes.clearLayers();
+function drawRoutes() { gRoutes.clearLayers(); if (!S.reglages.routes) return;
   S.routes.forEach(r => { L.polyline(r.pts, { color: '#000', weight: 8, opacity: .45, interactive: false }).addTo(gRoutes);
     L.polyline(r.pts, { color: '#e0e0e0', weight: 4, dashArray: r.nom.startsWith('Voie') ? '2 6' : null, interactive: false }).addTo(gRoutes)
       .bindTooltip(r.nom, { permanent: true, direction: 'center', className: 'road-lbl' }); }); }
@@ -1074,6 +1224,7 @@ const len = pts => pts.reduce((s, p, i) => i ? s + dist(pts[i-1], p) : 0, 0);
 let tab = 'battue';
 function renderList() {
   document.getElementById('nBattues').textContent = S.battues.length;
+  document.getElementById('nOiseaux').textContent = S.oiseaux.prises.reduce((n, o) => n + o.nb, 0);
   document.getElementById('nDrailles').textContent = S.drailles.length;
   document.getElementById('nDirect').textContent = events.length;
   const el = document.getElementById('list'); el.innerHTML = '';
@@ -1102,7 +1253,7 @@ function renderList() {
       const r = row((p.photo ? '<img class="thumb" alt="" src="' + p.photo + '">' : '<div class="num">' + p.num + '</div>'),
         'Poste ' + p.num + ' · ' + esc(p.nom), (p.chasseur ? esc(p.chasseur) : 'Libre') + (p.photo ? '' : ' · sans photo'),
         c.length ? '<span class="chip warn">30°</span>' : '<span class="chip ok">OK</span>');
-      r.onclick = () => { map.setView([p.lat,p.lng], Math.max(map.getZoom(), 17)); p._m.openPopup(); if (innerWidth <= 760) scrollTo(0,0); };
+      r.onclick = () => { closeDrawer(); map.setView([p.lat,p.lng], Math.max(map.getZoom(), 17)); p._m.openPopup(); };
       el.appendChild(r);
     });
   } else if (tab === 'drailles') {
@@ -1111,23 +1262,63 @@ function renderList() {
     S.drailles.forEach(d => {
       const b = row('<div class="thumb" style="background:' + (GIBIER[d.gibier] || '#ccc') + ';color:#1f2a1c">' + esc(d.gibier[0].toUpperCase()) + '</div>',
         esc(d.nom), esc(d.gibier) + (d.notes ? ' · ' + esc(d.notes) : ''), fmtM(len(d.pts)));
-      b.onclick = () => { map.fitBounds(d._l.getBounds(), { padding: [40,40] }); d._l.openPopup(); };
+      b.onclick = () => { closeDrawer(); map.fitBounds(d._l.getBounds(), { padding: [40,40] }); d._l.openPopup(); };
       el.appendChild(b);
     });
   } else if (tab === 'direct') {
     el.insertAdjacentHTML('beforeend', '<div class="section-note">Journal de la battue en cours. Depuis un poste, touchez « Animal vu » pour prévenir les voisins de la direction de fuite.</div>');
     if (!events.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Rien pour l\'instant. Les signalements des postes apparaîtront ici.</div>');
     events.forEach(e => el.insertAdjacentHTML('beforeend', '<div class="ev ' + e.kind + '"><time>' + e.t + '</time><div>' + e.html + '</div></div>'));
+  } else if (tab === 'oiseaux') {
+    renderOiseaux(el);
+  } else if (tab === 'reglages') {
+    renderReglages(el);
   }
+}
+function renderReglages(el) {
+  const c = S.compte, g = S.reglages;
+  el.innerHTML =
+    '<section class="set"><h3>Compte</h3>' +
+    '<div class="field"><label for="r-nom">Nom du chasseur</label><input id="r-nom" value="' + esc(c.nom) + '" placeholder="Prénom Nom"></div>' +
+    '<div class="field"><label for="r-soc">Société de chasse</label><input id="r-soc" value="' + esc(c.societe) + '" placeholder="ACCA, société, groupement…"></div>' +
+    '<div class="field"><label for="r-tel">Téléphone</label><input id="r-tel" type="tel" value="' + esc(c.tel) + '" placeholder="Pour être joint pendant la battue"></div>' +
+    '<p class="hint">Pour l\'instant le compte reste sur ce téléphone. Le partage des battues avec les autres membres viendra avec les comptes en ligne.</p></section>' +
+    '<section class="set"><h3>Paramètres</h3>' +
+    '<div class="field"><label for="r-terr">Nom du territoire</label><input id="r-terr" value="' + esc(S.terrain) + '"></div>' +
+    '<div class="field"><label for="r-fond">Fond de carte au démarrage</label><select id="r-fond">' + FONDS.map((f, i) => '<option value="' + i + '"' + (i === g.fond ? ' selected' : '') + '>' + f.nom + '</option>').join('') + '</select></div>' +
+    '<div class="two"><div class="field"><label for="r-angle">Angle de sécurité (°)</label><input id="r-angle" type="number" min="0" max="90" value="' + g.angle + '"></div>' +
+    '<div class="field"><label for="r-portee">Portée du cône (m)</label><input id="r-portee" type="number" min="30" max="500" step="10" value="' + g.portee + '"></div></div>' +
+    '<label class="check"><input id="r-routes" type="checkbox"' + (g.routes ? ' checked' : '') + '> Afficher les routes et la voie ferrée</label></section>' +
+    '<section class="set"><h3>Données</h3><p class="hint">Les battues, postes et drailles sont enregistrés sur ce téléphone.</p>' +
+    '<div class="line"><button type="button" class="btn" id="btnCopy">Copier les données</button><button type="button" class="btn danger" id="btnReset">Revenir à l\'exemple</button></div></section>' +
+    '<section class="set info"><h3>Infos</h3><dl><dt>Version</dt><dd>' + VERSION + '</dd><dt>Cartes</dt><dd>IGN Géoplateforme (satellite et plan)</dd>' +
+    '<dt>Oiseaux</dt><dd>' + S.oiseaux.prises.reduce((n, o) => n + o.nb, 0) + ' prises · ' + S.oiseaux.spots.length + ' spots</dd><dt>Battues</dt><dd>' + S.battues.length + ' · ' + S.battues.reduce((n, b) => n + b.postes.length, 0) + ' postes</dd><dt>Drailles</dt><dd>' + S.drailles.length + '</dd></dl>' +
+    '<p class="hint">Astuce : touchez le nom de la battue en haut de l\'écran pour en changer. Faites glisser un numéro de poste pour le déplacer.</p></section>';
+  const on = (id, f) => { el.querySelector('#' + id).onchange = e => { f(e.target); save(); render(); }; };
+  on('r-nom', t => c.nom = t.value.trim()); on('r-soc', t => c.societe = t.value.trim()); on('r-tel', t => c.tel = t.value.trim());
+  on('r-terr', t => S.terrain = t.value.trim() || S.terrain);
+  on('r-fond', t => g.fond = +t.value);
+  on('r-angle', t => g.angle = Math.max(0, Math.min(90, +t.value || 0)));
+  on('r-portee', t => g.portee = Math.max(30, Math.min(500, +t.value || 120)));
+  on('r-routes', t => g.routes = t.checked);
+  el.querySelector('#btnCopy').onclick = async e => {
+    try { await navigator.clipboard.writeText(toJSON()); e.target.textContent = 'Copié'; }
+    catch (err) { e.target.textContent = 'Copie refusée par le téléphone'; }
+    setTimeout(() => e.target.textContent = 'Copier les données', 2000);
+  };
+  const reset = el.querySelector('#btnReset');
+  reset.onclick = () => {
+    if (!reset.classList.contains('armed')) { reset.classList.add('armed'); reset.textContent = 'Tout effacer ? Touchez encore'; return; }
+    S = sample(); S.reglages = { angle: 30, portee: 120, fond: 0, routes: true }; S.compte = { nom: '', societe: '', tel: '' };
+    save(); render(); map.setView(C, 16);
+  };
 }
 function row(left, t, m, r) {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'row';
   b.innerHTML = left + '<div style="min-width:0"><div class="t">' + t + '</div><div class="m">' + m + '</div></div><div class="r">' + r + '</div>';
   return b;
 }
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-  tab = t.id.slice(4); document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t)); renderList();
-});
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setTab(t.id.slice(4)));
 
 // ---------- éditeurs ----------
 const bg = document.getElementById('sheetBg'), sheet = document.getElementById('sheet');
@@ -1193,17 +1384,21 @@ function editDraille(d, isNew) {
 let mode = null, draft = [], draftLine = null;
 const bar = document.getElementById('drawbar'), msg = document.getElementById('drawMsg'), ok = document.getElementById('drawOk');
 function startDraw(m) {
-  stopDraw(); mode = m; bar.hidden = false; map.getContainer().style.cursor = 'crosshair';
+  stopDraw(); closeDrawer(); mode = m; bar.hidden = false; menuBtn.hidden = true; map.getContainer().style.cursor = 'crosshair';
   if (m !== 'zone') document.getElementById(m === 'poste' ? 'btnPoste' : 'btnDraille').classList.add('on');
-  msg.textContent = m === 'poste' ? 'Touchez la carte à l\'emplacement du poste' : m === 'zone' ? 'Touchez la carte pour dessiner le tour de la zone' : 'Touchez la carte pour poser les points de la draille';
-  ok.hidden = m === 'poste';
+  msg.textContent = m === 'spot' ? 'Touchez la carte à l\'emplacement du spot' : m === 'poste' ? 'Touchez la carte à l\'emplacement du poste' : m === 'zone' ? 'Touchez la carte pour dessiner le tour de la zone' : 'Touchez la carte pour poser les points de la draille';
+  ok.hidden = m === 'poste' || m === 'spot';
 }
 function stopDraw() {
   mode = null; draft = []; if (draftLine) { map.removeLayer(draftLine); draftLine = null; }
-  bar.hidden = true; map.getContainer().style.cursor = '';
+  bar.hidden = true; menuBtn.hidden = false; map.getContainer().style.cursor = '';
   document.getElementById('btnPoste').classList.remove('on'); document.getElementById('btnDraille').classList.remove('on');
 }
 map.on('click', e => {
+  if (mode === 'spot') {
+    const sp = { id: 's' + Date.now(), nom: 'Nouveau spot', type: 'Plaine', lat: e.latlng.lat, lng: e.latlng.lng, notes: '' };
+    stopDraw(); editSpot(sp, true); return;
+  }
   if (mode === 'poste') {
     const n = P().reduce((m, p) => Math.max(m, p.num), 0) + 1;
     const p = { id: 'p' + Date.now(), num: n, nom: 'Poste ' + n, chasseur: '', lat: e.latlng.lat, lng: e.latlng.lng, orient: 180, ouv: 90, photo: '', notes: '' };
@@ -1224,11 +1419,12 @@ ok.onclick = () => {
 document.getElementById('drawCancel').onclick = stopDraw;
 document.getElementById('btnPoste').onclick = () => {
   if (mode === 'poste') return stopDraw();
-  if (!B()) { tab = 'battue'; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.id === 'tab-battue')); renderList();
+  if (!B()) { openDrawer('battue');
     return notice('Choisissez d\'abord une battue dans l\'onglet Battue : chaque poste appartient à une battue.'); }
   startDraw('poste');
 };
 document.getElementById('btnDraille').onclick = () => mode === 'draille' ? stopDraw() : startDraw('draille');
+let fondIdx = fondIdx0;
 document.getElementById('btnFond').onclick = () => {
   map.removeLayer(FONDS[fondIdx].l); fondIdx = (fondIdx + 1) % FONDS.length; FONDS[fondIdx].l.addTo(map);
   document.getElementById('fondLbl').textContent = FONDS[fondIdx].nom; document.getElementById('btnFond').title = 'Fond : ' + FONDS[fondIdx].nom;
@@ -1240,20 +1436,14 @@ document.getElementById('btnMoi').onclick = () => {
       if (me) map.removeLayer(me); me = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 3, fillColor: '#1e88ff', fillOpacity: 1 }).addTo(map); map.setView(ll, 17); },
     () => notice('Position refusée ou indisponible. Dans cet aperçu la localisation est bloquée ; elle fonctionne dans le fichier ouvert dans un navigateur.'), { enableHighAccuracy: true, timeout: 8000 });
 };
-document.getElementById('btnCopy').onclick = async e => {
-  const data = toJSON();
-  try { await navigator.clipboard.writeText(data); e.target.textContent = 'Copié'; }
-  catch (err) { e.target.textContent = 'Copie refusée par le navigateur'; }
-  setTimeout(() => e.target.textContent = 'Copier les données', 2000);
-};
-const reset = document.getElementById('btnReset');
-reset.onclick = () => {
-  if (!reset.dataset.armed) { reset.dataset.armed = '1'; reset.textContent = 'Effacer mes changements ?'; setTimeout(() => { delete reset.dataset.armed; reset.textContent = 'Revenir à l\'exemple'; }, 3000); return; }
-  S = sample(); save(); render(); map.setView(C, 16); delete reset.dataset.armed; reset.textContent = 'Revenir à l\'exemple';
-};
-
-function render() { drawRoutes(); drawZones(); drawDrailles(); drawPostes(); renderList(); document.getElementById('terrName').textContent = S.terrain; }
+function render() {
+  drawRoutes(); drawZones(); drawDrailles(); drawSpots(); drawPostes(); if (tab !== 'reglages') renderList(); else document.getElementById('nBattues').textContent = S.battues.length;
+  document.getElementById('terrName').textContent = S.terrain;
+  const b = B(); document.getElementById('topBattueLbl').textContent = b ? b.nom : 'Choisir une battue';
+  const sw = document.getElementById('topSw'); sw.style.background = b ? b.couleur : 'transparent'; sw.hidden = !b;
+}
 render();
+const fl = document.getElementById('fondLbl'); if (fl) fl.textContent = FONDS[fondIdx].nom;
 if (B()) logEv('info', '<b>Début de la traque « ' + esc(B().nom) + ' »</b>. ' + P().filter(p => p.chasseur).length + ' postes occupés sur ' + P().length + '.');
 })();
 </script>
