@@ -788,8 +788,8 @@ details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
 .info dt { color: var(--muted); }
 .info dd { margin: 0; }
 
-.drawbar { position: absolute; z-index: 600; white-space: normal; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  background: var(--ink); color: var(--panel); padding: 8px 10px 8px 14px; border-radius: 8px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: calc(100% - 32px); }
+.drawbar { position: absolute; z-index: 600; white-space: normal; width: max-content; left: 12px; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--panel); padding: 8px 10px 8px 14px; border-radius: 8px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: calc(100% - 72px); }
 .drawbar button { border: 0; padding: 6px 12px; border-radius: 5px; font-weight: 600; background: var(--blaze); color: var(--blaze-ink); }
 .drawbar button.ghost { background: transparent; color: var(--panel); border: 1px solid currentColor; }
 
@@ -1131,6 +1131,11 @@ function drawVu(p, brg) {
   const head = L.polygon([end, dest(end, brg + 150, 35), dest(end, brg - 150, 35)], { color: '#fff', fillColor: '#ff6a26', fillOpacity: 1, weight: 2, interactive: false }).addTo(gVus);
   setTimeout(() => { gVus.removeLayer(line); gVus.removeLayer(head); }, 90000);
 }
+function inZone(pt, z) { let ins = false;
+  for (let i = 0, j = z.length - 1; i < z.length; j = i++) { const a = z[i], c = z[j];
+    if ((a[1] > pt[1]) !== (c[1] > pt[1]) && pt[0] < (c[0] - a[0]) * (pt[1] - a[1]) / (c[1] - a[1]) + a[0]) ins = !ins; }
+  return ins; }
+const draillesDe = b => S.drailles.filter(d => d.pts.some(pt => inZone(pt, b.zone)));
 function drawDrailles() {
   gDr.clearLayers();
   S.drailles.forEach(d => {
@@ -1170,7 +1175,8 @@ async function api(method, code, path, body) {
 function genCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; crypto.getRandomValues(new Uint8Array(6)).forEach(x => c += A[x % A.length]); return c; }
 const moi = () => S.compte.nom || 'Chasseur';
 const battuePayload = b => ({ nom: b.nom, couleur: b.couleur, notes: b.notes || '', zone: b.zone, maj: Date.now(),
-  postes: b.postes.map(p => ({ id: p.id, num: p.num, nom: p.nom, chasseur: p.chasseur || '', lat: p.lat, lng: p.lng, orient: p.orient, ouv: p.ouv, notes: p.notes || '', photo: p.photo || '' })) });
+  postes: b.postes.map(p => ({ id: p.id, num: p.num, nom: p.nom, chasseur: p.chasseur || '', lat: p.lat, lng: p.lng, orient: p.orient, ouv: p.ouv, notes: p.notes || '', photo: p.photo || '' })),
+  drailles: draillesDe(b).filter(d => !d.live).map(d => ({ id: d.id, nom: d.nom, gibier: d.gibier, notes: d.notes || '', pts: d.pts })) });
 function needServer() {
   if (dbURL()) return false;
   notice('Le partage en direct n\'est pas encore branché : il manque l\'adresse du serveur (Menu › Réglages).'); return true;
@@ -1203,6 +1209,9 @@ function applyBattue(b, d) {
   if (!d) return;
   Object.assign(b, { nom: d.nom, couleur: d.couleur, notes: d.notes, zone: d.zone });
   b.postes = (d.postes || []).map(p => Object.assign({}, p));
+  if (b.live && b.live.role === 'membre') {
+    S.drailles = S.drailles.filter(x => x.live !== b.live.code).concat((d.drailles || []).filter(x => !S.drailles.some(y => !y.live && y.id === x.id)).map(x => Object.assign({}, x, { live: b.live.code })));
+  }
 }
 // applique un événement « put » ou « patch » du flux à la copie locale de l'arbre
 function applyTree(path, data, patch) {
@@ -1285,7 +1294,7 @@ function renderLiveBox(el, b) {
   const leave = box.querySelector('#btnLeave');
   if (leave) leave.onclick = () => {
     api('DELETE', b.live.code, 'membres/' + S.compte.id).catch(() => {});
-    disconnect(); S.battues = S.battues.filter(x => x !== b); S.cur = null; save(); render(); setTab('battue');
+    disconnect(); S.drailles = S.drailles.filter(x => x.live !== b.live.code); S.battues = S.battues.filter(x => x !== b); S.cur = null; save(); render(); setTab('battue');
   };
 }
 function askJoin() {
@@ -1435,15 +1444,18 @@ function renderList() {
       r.onclick = () => { closeDrawer(); map.setView([p.lat,p.lng], Math.max(map.getZoom(), 17)); p._m.openPopup(); };
       el.appendChild(r);
     });
+    const ds = draillesDe(b);
+    el.insertAdjacentHTML('beforeend', '<div class="subh">Drailles de la zone (' + ds.length + ')</div>');
+    if (!ds.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Aucune draille dans cette zone.</div>');
+    ds.forEach(d => el.appendChild(draRow(d)));
+    if (!(b.live && b.live.role === 'membre')) {
+      const ad = document.createElement('button'); ad.type = 'button'; ad.className = 'addrow'; ad.id = 'btnAddDr'; ad.textContent = '+ Tracer une draille dans cette battue';
+      ad.onclick = () => startDraw('draille'); el.appendChild(ad);
+    }
   } else if (tab === 'drailles') {
     el.insertAdjacentHTML('beforeend', '<div class="section-note">Touchez « Draille », puis posez les points le long du passage. La couleur indique le gibier.</div>');
     if (!S.drailles.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Aucune draille tracée.</div>');
-    S.drailles.forEach(d => {
-      const b = row('<div class="thumb" style="background:' + (GIBIER[d.gibier] || '#ccc') + ';color:#1f2a1c">' + esc(d.gibier[0].toUpperCase()) + '</div>',
-        esc(d.nom), esc(d.gibier) + (d.notes ? ' · ' + esc(d.notes) : ''), fmtM(len(d.pts)));
-      b.onclick = () => { closeDrawer(); map.fitBounds(d._l.getBounds(), { padding: [40,40] }); d._l.openPopup(); };
-      el.appendChild(b);
-    });
+    S.drailles.forEach(d => el.appendChild(draRow(d)));
   } else if (tab === 'direct') {
     if (B() && B().live) renderLiveBox(el, B());
     el.insertAdjacentHTML('beforeend', '<div class="section-note">Journal de la battue en cours. Depuis un poste, touchez « Animal vu » pour prévenir les voisins de la direction de fuite.</div>');
@@ -1454,6 +1466,12 @@ function renderList() {
   } else if (tab === 'reglages') {
     renderReglages(el);
   }
+}
+function draRow(d) {
+  const r = row('<div class="thumb" style="background:' + (GIBIER[d.gibier] || '#ccc') + ';color:#1f2a1c">' + esc(d.gibier[0].toUpperCase()) + '</div>',
+    esc(d.nom), esc(d.gibier) + (d.notes ? ' · ' + esc(d.notes) : ''), fmtM(len(d.pts)));
+  r.onclick = () => { closeDrawer(); map.fitBounds(d._l.getBounds(), { padding: [40,40] }); d._l.openPopup(); };
+  return r;
 }
 function renderReglages(el) {
   const c = S.compte, g = S.reglages;
