@@ -878,7 +878,87 @@ details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
 .leaflet-container { font-family: var(--font-body); }
 .leaflet-control-attribution { font-size: 10px; }
 
+/* animation d'ouverture */
+#splash { position: fixed; inset: 0; z-index: 5000; background: radial-gradient(120% 90% at 50% 45%, #2a3824 0%, #141c12 60%, #0b100a 100%); color: #f3efe4;
+  overflow: hidden; display: grid; place-items: center; cursor: pointer; animation: sp-out .55s cubic-bezier(.6,0,.8,.3) 3.05s forwards; -webkit-tap-highlight-color: transparent; }
+#splash.skip { animation: sp-out .35s ease forwards; }
+#splash svg.topo { position: absolute; inset: 0; width: 100%; height: 100%; }
+#splash .topo path { fill: none; stroke: #8fb070; stroke-width: 1.1; opacity: .28; animation: sp-draw 1.6s cubic-bezier(.3,.6,.2,1) forwards; }
+#splash .rows { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-around; opacity: 0; animation: sp-fade .8s ease .2s forwards; }
+#splash .rows div { white-space: nowrap; font: 700 34px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: rgba(243,239,228,.055); }
+#splash .rows div:nth-child(odd) { animation: sp-left 9s linear infinite; }
+#splash .rows div:nth-child(even) { animation: sp-right 9s linear infinite; }
+#splash .core { position: relative; display: grid; justify-items: center; gap: 18px; text-align: center; }
+#splash .reticle { position: relative; width: 210px; height: 210px; display: grid; place-items: center; animation: sp-lock 1.9s cubic-bezier(.2,.8,.2,1) both; }
+#splash .reticle svg { position: absolute; inset: 0; overflow: visible; }
+#splash .reticle .ring { fill: none; stroke: #ff6a26; stroke-width: 2; stroke-dasharray: 160 20; transform-origin: 105px 105px; animation: sp-spin 1.9s cubic-bezier(.2,.8,.2,1) both; }
+#splash .reticle .tick { stroke: #ff6a26; stroke-width: 2; }
+#splash .slot { height: 48px; width: 220px; overflow: hidden; -webkit-mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+#splash .slot ul { list-style: none; margin: 0; padding: 0; animation: sp-roll 1.9s cubic-bezier(.12,.7,.18,1) .15s both; }
+#splash .slot li { height: 48px; line-height: 48px; font: 700 34px/48px var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+#splash .slot li:last-child { color: #ff6a26; animation: sp-flash .5s ease 2s both; }
+#splash h1 { margin: 0; font: 700 44px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 .35em; }
+#splash h1 span { display: inline-block; opacity: 0; transform: translateY(22px); animation: sp-up .5s cubic-bezier(.2,.9,.3,1.3) forwards; }
+#splash .bar { width: 0; height: 5px; background: #ff6a26; border-radius: 3px; animation: sp-bar .6s cubic-bezier(.2,.8,.2,1) 2.35s forwards; }
+#splash p { margin: 0; font: 400 15px/1.3 var(--font-body); letter-spacing: .02em; opacity: 0; animation: sp-fade .5s ease 2.55s forwards; color: #c8cfbd; }
+#splash small { position: absolute; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--font-body); color: rgba(243,239,228,.4); }
+@keyframes sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes sp-fade { to { opacity: 1; } }
+@keyframes sp-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes sp-right { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes sp-lock { 0% { transform: scale(1.9); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sp-spin { from { transform: rotate(-300deg); } to { transform: rotate(0); } }
+@keyframes sp-roll { from { transform: translateY(0); } to { transform: translateY(calc(-48px * var(--n))); } }
+@keyframes sp-flash { 0% { text-shadow: 0 0 0 transparent; transform: scale(1); } 40% { text-shadow: 0 0 24px #ff6a26; transform: scale(1.15); } 100% { text-shadow: 0 0 8px rgba(255,106,38,.4); transform: scale(1); } }
+@keyframes sp-up { to { opacity: 1; transform: none; } }
+@keyframes sp-bar { to { width: 120px; } }
+@keyframes sp-out { to { opacity: 0; transform: scale(1.08); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  #splash, #splash * { animation-duration: .01s !important; animation-delay: 0s !important; }
+  #splash { animation: sp-out .3s ease 1.2s forwards !important; }
+}
 </style>
+<div id="splash" role="img" aria-label="Carnet de battue">
+  <svg class="topo" aria-hidden="true"></svg>
+  <div class="rows" aria-hidden="true"></div>
+  <div class="core">
+    <div class="reticle" aria-hidden="true">
+      <svg viewBox="0 0 210 210"><circle class="ring" cx="105" cy="105" r="96"/>
+        <line class="tick" x1="105" y1="0" x2="105" y2="24"/><line class="tick" x1="105" y1="186" x2="105" y2="210"/>
+        <line class="tick" x1="0" y1="105" x2="24" y2="105"/><line class="tick" x1="186" y1="105" x2="210" y2="105"/></svg>
+      <div class="slot"><ul></ul></div>
+    </div>
+    <h1></h1>
+    <div class="bar"></div>
+    <p>Battues · postes · drailles · oiseaux</p>
+  </div>
+  <small>Touchez pour passer</small>
+</div>
+<script>
+(() => {
+  const sp = document.getElementById('splash'); if (!sp) return;
+  const ESP = ['Chevreuil', 'Faisan', 'Cerf', 'Bécasse', 'Chamois', 'Perdrix', 'Renard', 'Canard colvert', 'Brocard', 'Lièvre', 'Biche', 'Grive', 'Sanglier'];
+  const ul = sp.querySelector('.slot ul');
+  ul.innerHTML = ESP.map(e => '<li>' + e + '</li>').join(''); ul.style.setProperty('--n', ESP.length - 1);
+  const line = ESP.join('   ·   ') + '   ·   '; sp.querySelector('.rows').innerHTML = Array.from({ length: 9 }, () => '<div>' + line + line + '</div>').join('');
+  sp.querySelector('h1').innerHTML = ['Carnet', 'de', 'battue'].map((w, i) => '<span style="animation-delay:' + (2.05 + i * .12) + 's">' + w + '</span>').join('');
+  // courbes de niveau tracées à la volée
+  const svg = sp.querySelector('.topo'), W = innerWidth, H = innerHeight; svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  const hills = [[W * .22, H * .2], [W * .85, H * .78], [W * .5, H * .52]];
+  let html = '';
+  hills.forEach(([cx, cy], h) => { for (let k = 1; k <= 7; k++) { const r = k * Math.max(W, H) * .045, pts = [];
+    for (let a = 0; a < 64; a++) { const t = a / 64 * Math.PI * 2, w = 1 + .16 * Math.sin(3 * t + h + k * .4) + .08 * Math.sin(5 * t + k);
+      pts.push((cx + Math.cos(t) * r * w * 1.25).toFixed(1) + ',' + (cy + Math.sin(t) * r * w).toFixed(1)); }
+    html += '<path d="M' + pts.join('L') + 'Z" style="animation-delay:' + (h * .15 + k * .06).toFixed(2) + 's"/>'; } });
+  svg.innerHTML = html;
+  svg.querySelectorAll('path').forEach(p => { const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; });
+  let done = false;
+  const end = () => { if (done) return; done = true; sp.remove(); };
+  sp.addEventListener('click', () => { sp.classList.add('skip'); setTimeout(end, 380); });
+  sp.addEventListener('animationend', e => { if (e.target === sp) end(); });
+  setTimeout(end, 4200);
+})();
+</script>
 
 <div class="app">
   <div style="position:relative;height:100%">
