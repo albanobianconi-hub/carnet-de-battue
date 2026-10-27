@@ -1,5 +1,5 @@
 // Carnet de battue : l'appli et les tuiles déjà vues restent disponibles sans réseau
-const APP = 'battue-app-v8', TILES = 'battue-tuiles-v1', MAX_TILES = 3000;
+const APP = 'battue-app-v9', TILES = 'battue-tuiles-v1', MAX_TILES = 3000;
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
 
@@ -20,8 +20,8 @@ async function trim(cache) {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const u = new URL(e.request.url);
-  if (u.hostname === 'data.geopf.fr' || u.hostname === 'server.arcgisonline.com' || u.hostname === 'commons.wikimedia.org' || u.hostname === 'upload.wikimedia.org') {
-    // tuiles et photos d'ouverture : le cache d'abord, puis le réseau (on garde la tuile pour la prochaine fois en forêt)
+  if (u.hostname === 'data.geopf.fr' || u.hostname === 'server.arcgisonline.com') {
+    // tuiles : le cache d'abord, puis le réseau (on garde la tuile pour la prochaine fois en forêt)
     e.respondWith(caches.open(TILES).then(async c => {
       const hit = await c.match(e.request);
       if (hit) return hit;
