@@ -764,6 +764,19 @@ details.especes-list { margin: 10px 4px 0; border: 1px solid var(--line); border
 details.especes-list summary { font-weight: 600; cursor: pointer; }
 details.especes-list h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 4px; }
 details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
+.livebox { margin: 4px 4px 10px; border: 2px solid var(--blaze); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.livebox .code { font-family: var(--font-mono); font-size: 30px; letter-spacing: .18em; text-align: center; font-variant-numeric: tabular-nums; }
+.livebox .lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; }
+.livebox .line { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.livebtn { width: calc(100% - 8px); margin: 0 4px 10px; }
+.dot-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; margin-right: 6px; animation: blink 1.4s infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .dot-live { animation: none; } }
+.mk-hunter { width: 26px; height: 26px; border-radius: 50%; background: #1e88ff; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.6); color: #fff; display: grid; place-items: center; font: 700 12px var(--font-body); }
+.mk-hunter.old { background: #7a8794; }
+.mrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 6px 2px; border-top: 1px solid var(--line); font-size: 14px; }
+.mrow:first-child { border-top: 0; }
+.mrow small { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
 .set { display: grid; gap: 10px; padding: 6px 8px 14px; }
 .set + .set { border-top: 1px solid var(--line); padding-top: 14px; }
 .set h3 { font-family: var(--font-display); font-size: 18px; text-transform: uppercase; letter-spacing: .06em; margin: 0; }
@@ -993,18 +1006,22 @@ if (!S.battues) S = sample();
 S.reglages = Object.assign({ angle: 30, portee: 120, fond: 0, routes: true }, S.reglages);
 if (!S.oiseaux) S.oiseaux = sample().oiseaux;
 S.compte = Object.assign({ nom: '', societe: '', tel: '' }, S.compte);
+if (!S.compte.id) S.compte.id = 'u' + Math.random().toString(36).slice(2, 10);
+// adresse de la base Firebase Realtime Database qui partage les battues en direct
+const DEFAULT_DB = '';
+if (S.reglages.serveur === undefined) S.reglages.serveur = DEFAULT_DB;
 const VERSION = '0.4 · 27 octobre 2026';
 const B = () => S.battues.find(b => b.id === S.cur) || null;
 const P = () => B() ? B().postes : [];
 const events = [], vus = [];
 let unread = 0;
-function logEv(kind, html) { const t = new Date(); events.unshift({ kind, html, t: t.toTimeString().slice(0,5) }); if (events.length > 60) events.pop();
+function logEv(kind, html, at) { const t = new Date(at || Date.now()); events.unshift({ kind, html, t: t.toTimeString().slice(0,5) }); if (events.length > 60) events.pop();
   document.getElementById('nDirect').textContent = events.length;
   if (tab === 'direct' && drawer && drawer.classList.contains('open')) renderList(); else if (kind !== 'info') unread++;
   const bd = document.getElementById('menuBadge'); bd.textContent = unread; bd.hidden = !unread; }
 // les clés en _ (calques Leaflet) ne sont pas des données : on les exclut
 const toJSON = () => JSON.stringify(S, (k, v) => k.startsWith('_') ? undefined : v);
-function save() { try { localStorage.setItem(KEY, toJSON()); } catch (e) { notice('Sauvegarde impossible sur cet appareil (espace plein ou navigation privée). Les modifications seront perdues à la fermeture.'); } }
+function save() { if (typeof liveSync === 'function') liveSync(); try { localStorage.setItem(KEY, toJSON()); } catch (e) { notice('Sauvegarde impossible sur cet appareil (espace plein ou navigation privée). Les modifications seront perdues à la fermeture.'); } }
 
 // ---------- carte ----------
 const map = L.map('map', { zoomControl: false, attributionControl: true }).setView(C, 16);
@@ -1028,7 +1045,7 @@ function tileWarn() {
 function notice(t) { const n = document.getElementById('notice'); n.textContent = t + ' (touchez pour fermer)'; n.hidden = false; n.onclick = () => n.hidden = true; }
 
 const gRoutes = L.layerGroup().addTo(map), gVus = L.layerGroup().addTo(map);
-const gZones = L.layerGroup().addTo(map), gSpots = L.layerGroup().addTo(map);
+const gZones = L.layerGroup().addTo(map), gSpots = L.layerGroup().addTo(map), gMembres = L.layerGroup().addTo(map);
 const gPostes = L.layerGroup().addTo(map), gSect = L.layerGroup().addTo(map), gDr = L.layerGroup().addTo(map);
 
 // géodésie simple (petites distances)
@@ -1092,15 +1109,27 @@ function popPoste(p) {
 }
 
 const DIRS = { N: 'le nord', NE: 'le nord-est', E: 'l\'est', SE: 'le sud-est', S: 'le sud', SO: 'le sud-ouest', O: 'l\'ouest', NO: 'le nord-ouest' };
+function ciblesDe(p, brg) { const a = [p.lat, p.lng];
+  return P().filter(q => q.id !== p.id && dist(a, [q.lat,q.lng]) < 700 && angDiff(bearing(a, [q.lat,q.lng]), brg) < 35).map(q => q.num); }
 function animalVu(p, brg, lbl, esp = ESPECES[0]) {
+  const b = B();
+  if (b && b.live && !b.live.fini) {
+    const ev = { type: 'vu', poste: p.num, espece: esp.id, dir: lbl, brg, par: S.compte.id, nom: S.compte.nom || '', t: Date.now() };
+    const k = ev.t + '-' + S.compte.id; LIVE.seen.add(k); showEvent(ev, false);
+    api('PUT', b.live.code, 'events/' + k, ev).catch(() => notice('Signalement pas envoyé : pas de réseau.'));
+    notice(esp.nom + ' signalé' + (esp.f ? 'e' : '') + ' à toute la battue.');
+    return;
+  }
+  drawVu(p, brg);
+  const cibles = ciblesDe(p, brg);
+  logEv('vu', '<b>Poste ' + p.num + ' : ' + esp.nom.toLowerCase() + (esp.f ? ' vue' : ' vu') + '</b>, part vers ' + DIRS[lbl] + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''));
+  notice(esp.nom + ' signalé' + (esp.f ? 'e' : '') + (cibles.length ? ' aux postes ' + cibles.join(', ') : '') + '. Détail dans Menu › Direct.');
+}
+function drawVu(p, brg) {
   const a = [p.lat, p.lng], end = dest(a, brg, 260);
   const line = L.polyline([a, end], { color: '#ffffff', weight: 3, dashArray: '2 6', interactive: false }).addTo(gVus);
   const head = L.polygon([end, dest(end, brg + 150, 35), dest(end, brg - 150, 35)], { color: '#fff', fillColor: '#ff6a26', fillOpacity: 1, weight: 2, interactive: false }).addTo(gVus);
   setTimeout(() => { gVus.removeLayer(line); gVus.removeLayer(head); }, 90000);
-  // postes vers lesquels l'animal se dirige (à moins de 35° de sa course, sous 700 m)
-  const cibles = P().filter(q => q.id !== p.id && dist(a, [q.lat,q.lng]) < 700 && angDiff(bearing(a, [q.lat,q.lng]), brg) < 35).map(q => q.num);
-  logEv('vu', '<b>Poste ' + p.num + ' : ' + esp.nom.toLowerCase() + (esp.f ? ' vue' : ' vu') + '</b>, part vers ' + DIRS[lbl] + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''));
-  notice(esp.nom + ' signalé' + (esp.f ? 'e' : '') + (cibles.length ? ' aux postes ' + cibles.join(', ') : '') + '. Détail dans Menu › Direct.');
 }
 function drawDrailles() {
   gDr.clearLayers();
@@ -1129,6 +1158,150 @@ function drawZones() {
     b._z = z;
   });
 }
+// ---------- battue en direct (Firebase Realtime Database, API REST + flux d'événements) ----------
+const LIVE = { es: null, code: null, tree: {}, seen: new Set(), watch: null, lastPos: 0, sync: null };
+const dbURL = () => (S.reglages.serveur || '').trim().replace(/\/+$/, '');
+const liveURL = (code, path) => dbURL() + '/live/' + code + (path ? '/' + path : '') + '.json';
+async function api(method, code, path, body) {
+  const r = await fetch(liveURL(code, path), { method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!r.ok) throw new Error('Le serveur a répondu ' + r.status);
+  return r.json();
+}
+function genCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; crypto.getRandomValues(new Uint8Array(6)).forEach(x => c += A[x % A.length]); return c; }
+const moi = () => S.compte.nom || 'Chasseur';
+const battuePayload = b => ({ nom: b.nom, couleur: b.couleur, notes: b.notes || '', zone: b.zone, maj: Date.now(),
+  postes: b.postes.map(p => ({ id: p.id, num: p.num, nom: p.nom, chasseur: p.chasseur || '', lat: p.lat, lng: p.lng, orient: p.orient, ouv: p.ouv, notes: p.notes || '', photo: p.photo || '' })) });
+function needServer() {
+  if (dbURL()) return false;
+  notice('Le partage en direct n\'est pas encore branché : il manque l\'adresse du serveur (Menu › Réglages).'); return true;
+}
+async function startLive(b) {
+  if (needServer()) return;
+  const code = genCode();
+  try {
+    await api('PUT', code, '', { battue: battuePayload(b), chef: moi(), cree: Date.now(), fin: false,
+      membres: { [S.compte.id]: { nom: moi(), poste: 0, chef: true, t: Date.now() } } });
+  } catch (e) { return notice('Impossible de créer la battue en direct : ' + e.message + '. Vérifiez le réseau.'); }
+  b.live = { code, role: 'chef' }; save(); connect(b); setTab('direct');
+}
+async function joinLive(code, posteNum) {
+  if (needServer()) return;
+  code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let d;
+  try { d = await api('GET', code, ''); } catch (e) { return notice('Connexion impossible : ' + e.message + '.'); }
+  if (!d || !d.battue) return notice('Aucune battue avec le code ' + code + '. Vérifiez les lettres auprès du chef.');
+  if (d.fin) return notice('Cette battue est terminée.');
+  let b = S.battues.find(x => x.live && x.live.code === code);
+  if (!b) { b = { id: 'live-' + code, nom: d.battue.nom, couleur: d.battue.couleur, notes: d.battue.notes, zone: d.battue.zone, postes: [] }; S.battues.push(b); }
+  b.live = { code, role: 'membre', poste: posteNum || 0 };
+  applyBattue(b, d.battue); S.cur = b.id; save();
+  try { await api('PATCH', code, 'membres/' + S.compte.id, { nom: moi(), poste: b.live.poste, t: Date.now() }); } catch (e) {}
+  connect(b); render(); map.fitBounds(b._z.getBounds(), { padding: [30, 30] }); setTab('direct');
+  notice('Vous avez rejoint « ' + b.nom + ' ».');
+}
+function applyBattue(b, d) {
+  if (!d) return;
+  Object.assign(b, { nom: d.nom, couleur: d.couleur, notes: d.notes, zone: d.zone });
+  b.postes = (d.postes || []).map(p => Object.assign({}, p));
+}
+// applique un événement « put » ou « patch » du flux à la copie locale de l'arbre
+function applyTree(path, data, patch) {
+  const keys = path.split('/').filter(Boolean);
+  if (!keys.length) { if (patch) Object.assign(LIVE.tree, data || {}); else LIVE.tree = data || {}; return; }
+  let o = LIVE.tree; for (let i = 0; i < keys.length - 1; i++) { if (typeof o[keys[i]] !== 'object' || !o[keys[i]]) o[keys[i]] = {}; o = o[keys[i]]; }
+  const k = keys[keys.length - 1];
+  if (patch) { o[k] = Object.assign(o[k] && typeof o[k] === 'object' ? o[k] : {}, data); }
+  else if (data === null) delete o[k]; else o[k] = data;
+}
+function connect(b) {
+  disconnect();
+  LIVE.code = b.live.code; LIVE.tree = {}; LIVE.seen = new Set(); let first = true;
+  const es = new EventSource(liveURL(b.live.code, ''));
+  const on = patch => e => { const m = JSON.parse(e.data); applyTree(m.path, m.data, patch); onTree(b, first); first = false; };
+  es.addEventListener('put', on(false)); es.addEventListener('patch', on(true));
+  es.onerror = () => { document.getElementById('topBattueLbl').textContent = b.nom + ' (reconnexion…)'; };
+  es.onopen = () => render();
+  LIVE.es = es;
+  if (navigator.geolocation) LIVE.watch = navigator.geolocation.watchPosition(sendPos, () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
+}
+function disconnect() {
+  if (LIVE.es) LIVE.es.close(); LIVE.es = null;
+  if (LIVE.watch !== null && navigator.geolocation) navigator.geolocation.clearWatch(LIVE.watch); LIVE.watch = null;
+  gMembres.clearLayers();
+}
+function sendPos(pos) {
+  const b = B(); if (!b || !b.live || Date.now() - LIVE.lastPos < 15000) return;
+  LIVE.lastPos = Date.now();
+  api('PATCH', b.live.code, 'membres/' + S.compte.id, { nom: moi(), poste: b.live.poste || 0, lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() }).catch(() => {});
+}
+function onTree(b, first) {
+  const t = LIVE.tree;
+  if (b.live.role === 'membre' && t.battue) { applyBattue(b, t.battue); save(); }
+  Object.entries(t.events || {}).sort((x, y) => (x[1].t || 0) - (y[1].t || 0)).forEach(([k, ev]) => {
+    if (LIVE.seen.has(k)) return; LIVE.seen.add(k);
+    showEvent(ev, !first && ev.par !== S.compte.id);
+  });
+  if (t.fin && !b.live.fini) { b.live.fini = true; save(); logEv('info', '<b>Battue terminée</b> par le chef.'); if (!first) notice('Le chef a terminé la battue « ' + b.nom + ' ».'); }
+  drawMembres(); render();
+}
+function showEvent(ev, alert) {
+  if (ev.type !== 'vu') return;
+  const p = P().find(q => q.num === ev.poste); const esp = ESPECES.find(e => e.id === ev.espece) || ESPECES[0];
+  const qui = ev.nom ? ' (' + esc(ev.nom) + ')' : '';
+  if (p) drawVu(p, ev.brg);
+  const cibles = p ? ciblesDe(p, ev.brg) : [];
+  logEv('vu', '<b>Poste ' + ev.poste + qui + ' : ' + esp.nom.toLowerCase() + (esp.f ? ' vue' : ' vu') + '</b>, part vers ' + (DIRS[ev.dir] || '?') + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''), ev.t);
+  const mine = b => b && b.live && b.live.poste && cibles.includes(b.live.poste);
+  if (alert) { notice((mine(B()) ? 'Attention, vers vous : ' : '') + esp.nom + ' vu' + (esp.f ? 'e' : '') + ' au poste ' + ev.poste + ', part vers ' + (DIRS[ev.dir] || '?') + '.'); if (navigator.vibrate) navigator.vibrate(mine(B()) ? [200, 100, 200] : 150); }
+}
+function drawMembres() {
+  gMembres.clearLayers();
+  Object.entries(LIVE.tree.membres || {}).forEach(([id, m]) => {
+    if (id === S.compte.id || m.lat === undefined) return;
+    const old = Date.now() - (m.t || 0) > 120000;
+    L.marker([m.lat, m.lng], { icon: L.divIcon({ className: '', html: '<div class="mk-hunter' + (old ? ' old' : '') + '">' + esc((m.nom || '?')[0].toUpperCase()) + '</div>', iconSize: [26, 26], iconAnchor: [13, 13] }) })
+      .bindTooltip(esc(m.nom || 'Chasseur') + (m.poste ? ' · poste ' + m.poste : ''), { permanent: true, direction: 'right', offset: [12, 0], className: 'road-lbl' }).addTo(gMembres);
+  });
+}
+const ago = t => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'à l\'instant' : s < 3600 ? 'il y a ' + Math.round(s / 60) + ' min' : 'il y a ' + Math.round(s / 3600) + ' h'; };
+function renderLiveBox(el, b) {
+  const box = document.createElement('div'); box.className = 'livebox';
+  const ms = Object.entries(LIVE.tree.membres || {}).sort((x, y) => (x[1].poste || 99) - (y[1].poste || 99));
+  box.innerHTML = '<div class="lbl"><span class="dot-live"></span>' + (b.live.fini ? 'Battue terminée' : 'En direct · code de la battue') + '</div><div class="code">' + b.live.code + '</div>' +
+    '<div class="line"><button type="button" class="btn" id="btnShare">Partager le code</button>' +
+    (b.live.role === 'chef' ? '<button type="button" class="btn danger" id="btnEnd">Terminer la battue</button>' : '<button type="button" class="btn" id="btnLeave">Quitter</button>') + '</div>' +
+    '<div>' + (ms.length ? ms.map(([id, m]) => '<div class="mrow"><span>' + esc(m.nom || 'Chasseur') + (m.chef ? ' · chef' : '') + (id === S.compte.id ? ' (vous)' : '') + '</span><small>' + (m.poste ? 'poste ' + m.poste + ' · ' : '') + (m.t ? ago(m.t) : '') + '</small></div>').join('') : '<div class="hint" style="font-size:13px;color:var(--muted)">Connexion…</div>') + '</div>';
+  el.appendChild(box);
+  box.querySelector('#btnShare').onclick = async e => {
+    const txt = 'Rejoins la battue « ' + b.nom + ' » dans Carnet de battue avec le code ' + b.live.code + ' : ' + location.href.split('#')[0];
+    try { if (navigator.share) await navigator.share({ text: txt }); else { await navigator.clipboard.writeText(txt); e.target.textContent = 'Code copié'; } } catch (err) {}
+  };
+  const end = box.querySelector('#btnEnd');
+  if (end) end.onclick = async () => {
+    if (!end.classList.contains('armed')) { end.classList.add('armed'); end.textContent = 'Terminer pour tous ?'; return; }
+    try { await api('PATCH', b.live.code, '', { fin: true }); } catch (e) {}
+    disconnect(); delete b.live; save(); render();
+  };
+  const leave = box.querySelector('#btnLeave');
+  if (leave) leave.onclick = () => {
+    api('DELETE', b.live.code, 'membres/' + S.compte.id).catch(() => {});
+    disconnect(); S.battues = S.battues.filter(x => x !== b); S.cur = null; save(); render(); setTab('battue');
+  };
+}
+function askJoin() {
+  openSheet('<h2>Rejoindre une battue</h2>' +
+    '<div class="field"><label for="f-code">Code donné par le chef</label><input id="f-code" name="code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="Ex. K7P2QX" required style="font-family:var(--font-mono);font-size:22px;letter-spacing:.15em;text-transform:uppercase"></div>' +
+    '<div class="two"><div class="field"><label for="f-jnom">Votre nom</label><input id="f-jnom" name="nom" value="' + esc(S.compte.nom) + '" required></div>' +
+    '<div class="field"><label for="f-jp">Votre poste</label><input id="f-jp" name="poste" type="number" min="0" max="99" placeholder="N°"></div></div>' +
+    '<p style="margin:0;color:var(--muted);font-size:13px">Votre position sera partagée avec les membres de la battue tant qu\'elle est ouverte.</p>' +
+    '<div class="actions"><span></span><span style="display:flex;gap:8px"><button type="button" class="btn" data-cancel>Annuler</button><button class="btn primary">Rejoindre</button></span></div>',
+    fd => { S.compte.nom = (fd.get('nom') || '').trim(); save(); joinLive(fd.get('code') || '', +fd.get('poste') || 0); });
+}
+function liveSync() {
+  const b = B(); if (!b || !b.live || b.live.role !== 'chef' || b.live.fini) return;
+  clearTimeout(LIVE.sync); LIVE.sync = setTimeout(() => api('PUT', b.live.code, 'battue', battuePayload(b)).catch(() => {}), 800);
+}
+
 // ---------- chasse aux oiseaux ----------
 const spotById = id => S.oiseaux.spots.find(x => x.id === id);
 const prisesDu = sp => S.oiseaux.prises.filter(o => o.spot === sp.id);
@@ -1229,10 +1402,11 @@ function renderList() {
   document.getElementById('nDirect').textContent = events.length;
   const el = document.getElementById('list'); el.innerHTML = '';
   if (tab === 'battue' && !B()) {
+    const jb = document.createElement('button'); jb.type = 'button'; jb.className = 'btn primary livebtn'; jb.id = 'btnJoin'; jb.textContent = 'Rejoindre une battue avec un code'; jb.onclick = askJoin; el.appendChild(jb);
     el.insertAdjacentHTML('beforeend', '<div class="section-note">Choisissez la battue selon la zone que vous voulez faire, puis placez ses postes. Touchez une zone sur la carte pour l\'ouvrir.</div>');
     S.battues.forEach(b => {
       const r = row('<div class="swatch" style="border-color:' + b.couleur + ';color:' + b.couleur + '">' + esc(b.nom[0].toUpperCase()) + '</div>',
-        esc(b.nom), b.postes.length + ' poste' + (b.postes.length > 1 ? 's' : '') + ' · ' + b.postes.filter(p => p.chasseur).length + ' occupé' + (b.postes.filter(p => p.chasseur).length > 1 ? 's' : ''),
+        (b.live && !b.live.fini ? '<span class="dot-live"></span>' : '') + esc(b.nom), b.postes.length + ' poste' + (b.postes.length > 1 ? 's' : '') + ' · ' + b.postes.filter(p => p.chasseur).length + ' occupé' + (b.postes.filter(p => p.chasseur).length > 1 ? 's' : ''),
         fmtHa(surfaceHa(b.zone)));
       r.onclick = () => selectBattue(b.id, true);
       el.appendChild(r);
@@ -1246,6 +1420,11 @@ function renderList() {
     el.appendChild(h);
     h.querySelector('#btnBack').onclick = () => { S.cur = null; save(); render(); map.fitBounds(L.featureGroup(S.battues.map(x => x._z)).getBounds(), { padding: [20, 20] }); };
     h.querySelector('#btnEditB').onclick = () => editBattue(b);
+    if (b.live && !b.live.fini) {
+      const lb = document.createElement('button'); lb.type = 'button'; lb.className = 'btn livebtn'; lb.innerHTML = '<span class="dot-live"></span>En direct · code ' + b.live.code; lb.onclick = () => setTab('direct'); el.appendChild(lb);
+    } else {
+      const lb = document.createElement('button'); lb.type = 'button'; lb.className = 'btn primary livebtn'; lb.id = 'btnLive'; lb.textContent = 'Lancer en direct (donne un code aux chasseurs)'; lb.onclick = () => startLive(b); el.appendChild(lb);
+    }
     el.insertAdjacentHTML('beforeend', '<div class="section-note">' + fmtHa(surfaceHa(b.zone)) + (b.notes ? ' · ' + esc(b.notes) : '') + '<br>Touchez « Poste » puis la carte pour en ajouter un. Faites glisser un numéro pour le déplacer. Le cône passe en rouge si un voisin est à moins de 30° du secteur de tir.</div>');
     if (!b.postes.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Aucun poste dans cette battue. Touchez « Poste » puis la carte pour placer le premier.</div>');
     [...b.postes].sort((a, b) => a.num - b.num).forEach(p => {
@@ -1266,6 +1445,7 @@ function renderList() {
       el.appendChild(b);
     });
   } else if (tab === 'direct') {
+    if (B() && B().live) renderLiveBox(el, B());
     el.insertAdjacentHTML('beforeend', '<div class="section-note">Journal de la battue en cours. Depuis un poste, touchez « Animal vu » pour prévenir les voisins de la direction de fuite.</div>');
     if (!events.length) el.insertAdjacentHTML('beforeend', '<div class="empty">Rien pour l\'instant. Les signalements des postes apparaîtront ici.</div>');
     events.forEach(e => el.insertAdjacentHTML('beforeend', '<div class="ev ' + e.kind + '"><time>' + e.t + '</time><div>' + e.html + '</div></div>'));
@@ -1288,7 +1468,8 @@ function renderReglages(el) {
     '<div class="field"><label for="r-fond">Fond de carte au démarrage</label><select id="r-fond">' + FONDS.map((f, i) => '<option value="' + i + '"' + (i === g.fond ? ' selected' : '') + '>' + f.nom + '</option>').join('') + '</select></div>' +
     '<div class="two"><div class="field"><label for="r-angle">Angle de sécurité (°)</label><input id="r-angle" type="number" min="0" max="90" value="' + g.angle + '"></div>' +
     '<div class="field"><label for="r-portee">Portée du cône (m)</label><input id="r-portee" type="number" min="30" max="500" step="10" value="' + g.portee + '"></div></div>' +
-    '<label class="check"><input id="r-routes" type="checkbox"' + (g.routes ? ' checked' : '') + '> Afficher les routes et la voie ferrée</label></section>' +
+    '<label class="check"><input id="r-routes" type="checkbox"' + (g.routes ? ' checked' : '') + '> Afficher les routes et la voie ferrée</label>' +
+    '<div class="field"><label for="r-srv">Serveur de partage en direct</label><input id="r-srv" type="url" value="' + esc(g.serveur) + '" placeholder="https://…firebasedatabase.app"></div></section>' +
     '<section class="set"><h3>Données</h3><p class="hint">Les battues, postes et drailles sont enregistrés sur ce téléphone.</p>' +
     '<div class="line"><button type="button" class="btn" id="btnCopy">Copier les données</button><button type="button" class="btn danger" id="btnReset">Revenir à l\'exemple</button></div></section>' +
     '<section class="set info"><h3>Infos</h3><dl><dt>Version</dt><dd>' + VERSION + '</dd><dt>Cartes</dt><dd>IGN Géoplateforme (satellite et plan)</dd>' +
@@ -1301,6 +1482,7 @@ function renderReglages(el) {
   on('r-angle', t => g.angle = Math.max(0, Math.min(90, +t.value || 0)));
   on('r-portee', t => g.portee = Math.max(30, Math.min(500, +t.value || 120)));
   on('r-routes', t => g.routes = t.checked);
+  on('r-srv', t => g.serveur = t.value.trim());
   el.querySelector('#btnCopy').onclick = async e => {
     try { await navigator.clipboard.writeText(toJSON()); e.target.textContent = 'Copié'; }
     catch (err) { e.target.textContent = 'Copie refusée par le téléphone'; }
@@ -1309,7 +1491,7 @@ function renderReglages(el) {
   const reset = el.querySelector('#btnReset');
   reset.onclick = () => {
     if (!reset.classList.contains('armed')) { reset.classList.add('armed'); reset.textContent = 'Tout effacer ? Touchez encore'; return; }
-    S = sample(); S.reglages = { angle: 30, portee: 120, fond: 0, routes: true }; S.compte = { nom: '', societe: '', tel: '' };
+    disconnect(); const srv = g.serveur, id = c.id; S = sample(); S.reglages = { angle: 30, portee: 120, fond: 0, routes: true, serveur: srv }; S.compte = { nom: '', societe: '', tel: '', id };
     save(); render(); map.setView(C, 16);
   };
 }
@@ -1439,11 +1621,13 @@ document.getElementById('btnMoi').onclick = () => {
 function render() {
   drawRoutes(); drawZones(); drawDrailles(); drawSpots(); drawPostes(); if (tab !== 'reglages') renderList(); else document.getElementById('nBattues').textContent = S.battues.length;
   document.getElementById('terrName').textContent = S.terrain;
-  const b = B(); document.getElementById('topBattueLbl').textContent = b ? b.nom : 'Choisir une battue';
+  const b = B(); document.getElementById('topBattueLbl').innerHTML = b ? (b.live && !b.live.fini ? '<span class="dot-live"></span>' : '') + esc(b.nom) : 'Choisir une battue';
   const sw = document.getElementById('topSw'); sw.style.background = b ? b.couleur : 'transparent'; sw.hidden = !b;
 }
 render();
 const fl = document.getElementById('fondLbl'); if (fl) fl.textContent = FONDS[fondIdx].nom;
+if (B() && B().live && !B().live.fini && dbURL()) connect(B());
+setInterval(() => { if (LIVE.es && tab === 'direct' && drawer.classList.contains('open')) renderList(); drawMembres(); }, 30000);
 if (B()) logEv('info', '<b>Début de la traque « ' + esc(B().nom) + ' »</b>. ' + P().filter(p => p.chasseur).length + ' postes occupés sur ' + P().length + '.');
 })();
 </script>
