@@ -1008,8 +1008,8 @@ if (!S.oiseaux) S.oiseaux = sample().oiseaux;
 S.compte = Object.assign({ nom: '', societe: '', tel: '' }, S.compte);
 if (!S.compte.id) S.compte.id = 'u' + Math.random().toString(36).slice(2, 10);
 // adresse de la base Firebase Realtime Database qui partage les battues en direct
-const DEFAULT_DB = '';
-if (S.reglages.serveur === undefined) S.reglages.serveur = DEFAULT_DB;
+const DEFAULT_DB = 'https://carnet-de-battue-default-rtdb.europe-west1.firebasedatabase.app';
+if (!S.reglages.serveur) S.reglages.serveur = DEFAULT_DB;
 const VERSION = '0.4 · 27 octobre 2026';
 const B = () => S.battues.find(b => b.id === S.cur) || null;
 const P = () => B() ? B().postes : [];
