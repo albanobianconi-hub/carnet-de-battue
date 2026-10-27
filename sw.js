@@ -1,5 +1,5 @@
 // Carnet de battue : l'appli et les tuiles déjà vues restent disponibles sans réseau
-const APP = 'battue-app-v9', TILES = 'battue-tuiles-v1', MAX_TILES = 3000;
+const APP = 'battue-app-v10', TILES = 'battue-tuiles-v1', MAX_TILES = 3000;
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
 
