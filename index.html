@@ -779,6 +779,9 @@ button { cursor: pointer; }
 .ev.vu b { color: var(--blaze); }
 .compass { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; margin: 8px auto 0; width: max-content; }
 .compass button { margin: 0 !important; padding: 8px 0 !important; font-family: var(--font-mono); font-size: 12px; }
+.especes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; max-width: 236px; }
+.especes button { margin: 0 !important; padding: 5px 8px !important; border-radius: 99px !important; font-size: 12px; font-weight: 600; }
+.especes button[aria-pressed="true"] { background: var(--blaze) !important; color: var(--blaze-ink); border-color: var(--blaze) !important; }
 .compass span { display: grid; place-items: center; font-size: 11px; color: var(--muted); }
 .leaflet-tooltip.road-lbl { background: rgba(20,24,18,.8); color: #fff; border: 0; box-shadow: none; font-family: var(--font-display); font-weight: 600; font-size: 12px; padding: 1px 6px; }
 .leaflet-tooltip.road-lbl::before { display: none; }
@@ -876,7 +879,14 @@ button { cursor: pointer; }
 (() => {
 const KEY = 'carnet-battue-v2';
 const ZONE_COLORS = ['#ff8a3d', '#4fc3f7', '#c5e86c', '#f48fb1', '#ffd54f'];
-const GIBIER = { sanglier: '#e8591a', chevreuil: '#f2c14e', cerf: '#c77dff', renard: '#ff8fa3', autre: '#ffffff' };
+const GIBIER = { sanglier: '#e8591a', chevreuil: '#f2c14e', cerf: '#c77dff', chamois: '#7fd1ae', renard: '#ff8fa3', autre: '#ffffff' };
+// espèces proposées au poste pour « Animal vu » ; f = féminin (« vue »)
+const ESPECES = [
+  { id: 'sanglier', nom: 'Sanglier' }, { id: 'renard', nom: 'Renard' },
+  { id: 'chevreuil', nom: 'Chevreuil' }, { id: 'chevrette', nom: 'Chevrette', f: true }, { id: 'brocard', nom: 'Brocard' },
+  { id: 'cerf', nom: 'Cerf' }, { id: 'biche', nom: 'Biche', f: true }, { id: 'faon', nom: 'Faon' },
+  { id: 'chamois', nom: 'Chamois' }, { id: 'autre', nom: 'Autre animal' }
+];
 const SAFETY_DEG = 30; // règle des 30° : on ne tire pas à moins de 30° d'un poste voisin
 
 // ---------- données d'exemple ----------
@@ -979,7 +989,7 @@ function drawPostes() {
     for (let a = p.orient - p.ouv/2; a <= p.orient + p.ouv/2 + .01; a += 5) pts.push(dest([p.lat,p.lng], a, 120));
     L.polygon(pts, { color: c.length ? '#ff5a4f' : '#ff8a3d', weight: 1.5, fillOpacity: .18, dashArray: c.length ? '4 4' : null, interactive: false }).addTo(gSect);
     const m = L.marker([p.lat,p.lng], { draggable: true, icon: L.divIcon({ className: '', html: '<div class="mk-poste' + (c.length ? ' alert' : '') + '">' + p.num + '</div>', iconSize: [30,30], iconAnchor: [15,15] }) });
-    m.bindPopup(() => popPoste(p), { maxWidth: 260 });
+    m.bindPopup(() => popPoste(p), { maxWidth: 260, autoPanPaddingTopLeft: L.point(12, 70) });
     m.on('dragend', e => { const ll = e.target.getLatLng(); p.lat = ll.lat; p.lng = ll.lng; save(); render(); });
     m.addTo(gPostes); p._m = m;
   });
@@ -995,24 +1005,32 @@ function popPoste(p) {
   const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Modifier'; b.onclick = () => { map.closePopup(); editPoste(p); };
   const v = document.createElement('button'); v.type = 'button'; v.textContent = 'Animal vu'; v.style.marginLeft = '6px';
   // remplacement différé : sinon Leaflet voit un clic hors du popup (bouton détaché) et le referme
-  v.onclick = () => setTimeout(() => { const cp = document.createElement('div'); cp.innerHTML = '<div class="m" style="margin-top:8px">Sanglier vu, part vers :</div>';
+  v.onclick = () => setTimeout(() => { const cp = document.createElement('div'); cp.innerHTML = '<div class="m" style="margin-top:8px">Espèce vue :</div>';
+    let esp = ESPECES[0];
+    const ch = document.createElement('div'); ch.className = 'especes';
+    ESPECES.forEach(e => { const eb = document.createElement('button'); eb.type = 'button'; eb.textContent = e.nom; eb.setAttribute('aria-pressed', e === esp);
+      eb.onclick = () => { esp = e; ch.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === eb)); }; ch.appendChild(eb); });
+    cp.appendChild(ch);
+    cp.insertAdjacentHTML('beforeend', '<div class="m" style="margin-top:8px">Part vers :</div>');
     const g = document.createElement('div'); g.className = 'compass';
     [['NO',315],['N',0],['NE',45],['O',270],null,['E',90],['SO',225],['S',180],['SE',135]].forEach(x => {
       if (!x) { g.insertAdjacentHTML('beforeend', '<span>' + p.num + '</span>'); return; }
-      const bb = document.createElement('button'); bb.type = 'button'; bb.textContent = x[0]; bb.onclick = () => { animalVu(p, x[1], x[0]); map.closePopup(); }; g.appendChild(bb); });
-    cp.appendChild(g); v.replaceWith(cp); }, 0);
+      const bb = document.createElement('button'); bb.type = 'button'; bb.textContent = x[0]; bb.onclick = () => { animalVu(p, x[1], x[0], esp); map.closePopup(); }; g.appendChild(bb); });
+    cp.appendChild(g); v.replaceWith(cp);
+    // le popup a grandi : on le recadre pour qu'il reste sous la barre d'outils
+    const pop = p._m.getPopup(); pop._updateLayout(); pop._updatePosition(); pop._adjustPan(); }, 0);
   d.appendChild(b); d.appendChild(v); return d;
 }
 
 const DIRS = { N: 'le nord', NE: 'le nord-est', E: 'l\'est', SE: 'le sud-est', S: 'le sud', SO: 'le sud-ouest', O: 'l\'ouest', NO: 'le nord-ouest' };
-function animalVu(p, brg, lbl) {
+function animalVu(p, brg, lbl, esp = ESPECES[0]) {
   const a = [p.lat, p.lng], end = dest(a, brg, 260);
   const line = L.polyline([a, end], { color: '#ffffff', weight: 3, dashArray: '2 6', interactive: false }).addTo(gVus);
   const head = L.polygon([end, dest(end, brg + 150, 35), dest(end, brg - 150, 35)], { color: '#fff', fillColor: '#ff6a26', fillOpacity: 1, weight: 2, interactive: false }).addTo(gVus);
   setTimeout(() => { gVus.removeLayer(line); gVus.removeLayer(head); }, 90000);
   // postes vers lesquels l'animal se dirige (à moins de 35° de sa course, sous 700 m)
   const cibles = P().filter(q => q.id !== p.id && dist(a, [q.lat,q.lng]) < 700 && angDiff(bearing(a, [q.lat,q.lng]), brg) < 35).map(q => q.num);
-  logEv('vu', '<b>Poste ' + p.num + ' : sanglier vu</b>, part vers ' + DIRS[lbl] + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''));
+  logEv('vu', '<b>Poste ' + p.num + ' : ' + esp.nom.toLowerCase() + (esp.f ? ' vue' : ' vu') + '</b>, part vers ' + DIRS[lbl] + '.' + (cibles.length ? ' Postes prévenus : ' + cibles.join(', ') + '.' : ''));
   tab = 'direct'; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.id === 'tab-direct')); renderList();
 }
 function drawDrailles() {
