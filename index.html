@@ -917,10 +917,22 @@ details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
   #splash, #splash * { animation-duration: .01s !important; animation-delay: 0s !important; }
   #splash { animation: sp-out .3s ease 1.2s forwards !important; }
 }
+#splash .herd { position: absolute; inset: 0; pointer-events: none; }
+#splash .run { position: absolute; left: 0; opacity: 0; color: #9fbf7e; animation: sp-run linear both; }
+#splash .run svg { display: block; width: 100%; height: 100%; fill: currentColor; overflow: visible; }
+#splash .run.rtl svg { transform: scaleX(-1); }
+#splash .run.rtl { animation-name: sp-run-rtl; }
+#splash .gait { transform-box: fill-box; transform-origin: 50% 80%; animation: sp-gallop .34s ease-in-out infinite alternate; }
+#splash .gait.fly { animation: sp-fly .5s ease-in-out infinite alternate; }
+@keyframes sp-run { 0% { transform: translateX(-40vw); opacity: 0; } 10%, 85% { opacity: var(--o, .22); } 100% { transform: translateX(115vw); opacity: 0; } }
+@keyframes sp-run-rtl { 0% { transform: translateX(115vw); opacity: 0; } 10%, 85% { opacity: var(--o, .22); } 100% { transform: translateX(-40vw); opacity: 0; } }
+@keyframes sp-gallop { from { transform: translateY(-7%) rotate(-5deg); } to { transform: translateY(3%) rotate(4deg); } }
+@keyframes sp-fly { from { transform: translateY(-10%) scaleY(.85); } to { transform: translateY(8%) scaleY(1.05); } }
 </style>
 <div id="splash" role="img" aria-label="Carnet de battue">
   <svg class="topo" aria-hidden="true"></svg>
   <div class="rows" aria-hidden="true"></div>
+  <div class="herd" aria-hidden="true"><svg width="0" height="0" style="position:absolute"><defs><symbol id="a-sanglier" viewBox="0 0 120 64"><path d="M14 30 C14 16 30 8 52 8 C66 8 76 10 86 16 L92 14 L95 20 C100 22 104 26 108 30 L118 34 L117 38 L108 40 C104 44 98 46 92 46 L88 46 L86 58 L80 58 L80 47 C70 49 54 49 44 47 L42 58 L36 58 L35 46 C28 44 24 44 22 50 L20 58 L14 58 L16 44 C12 40 12 34 14 30 Z M12 26 C8 26 4 22 4 18 L7 18 C8 21 10 23 14 23 Z"/><path d="M28 10 L32 4 L36 9 L41 3 L45 8 L50 2 L54 8 L59 3 L62 9 L68 5 L70 11 Z"/></symbol><symbol id="a-cerf" viewBox="0 -26 120 126"><path d="M20 52 C20 44 30 40 46 40 L72 40 C78 40 82 38 84 34 L88 24 C89 20 92 18 96 18 L100 20 L112 26 L111 30 L102 31 C99 34 96 40 94 46 C92 52 88 56 84 58 L86 96 L81 96 L78 62 C70 64 56 64 46 62 L42 96 L37 96 L36 62 C30 60 28 62 27 70 L28 96 L23 96 L20 70 C18 64 18 58 20 52 Z M16 46 C12 44 12 40 16 40 L20 44 Z"/><path d="M95 19 C92 8 88 -4 80 -16 M90 5 L99 -1 M86 -3 L93 -12 M83 -10 L78 -20 M100 18 C103 6 106 -6 113 -18 M103 3 L113 -2 M105 -6 L101 -16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M94 20 L90 16 L96 17 Z"/></symbol><symbol id="a-chevreuil" viewBox="0 0 100 80"><path d="M18 40 C18 34 26 30 38 30 L60 30 C64 30 67 28 69 24 L73 14 C74 11 77 10 80 11 L90 16 L89 19 L82 20 C80 24 78 30 76 36 C74 40 72 42 70 44 L72 78 L68 78 L65 48 C58 50 46 50 40 48 L36 78 L32 78 L31 48 C26 46 24 48 24 54 L25 78 L21 78 L18 56 C16 50 16 44 18 40 Z"/><path d="M79 12 L77 4 L74 1 M77 6 L80 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M76 12 L73 7 L78 10 Z"/></symbol><symbol id="a-renard" viewBox="0 0 120 56"><path d="M30 26 C34 20 46 18 62 18 L80 18 C84 18 87 16 89 13 L92 6 L95 12 L98 6 L100 14 C104 16 108 18 112 20 L118 22 L116 25 L108 27 C104 30 98 32 94 32 L92 32 L94 52 L90 52 L86 34 C78 36 64 36 56 34 L52 52 L48 52 L48 34 C42 34 40 36 40 42 L42 52 L38 52 L35 40 C33 36 32 32 30 30 C20 34 10 34 2 28 C10 28 18 24 30 26 Z"/></symbol><symbol id="a-lievre" viewBox="0 0 90 56"><path d="M10 34 C10 22 24 16 40 18 C50 19 58 22 62 26 L66 24 C68 14 72 4 76 2 C78 6 76 14 72 22 C76 14 82 8 85 8 C86 12 80 20 74 26 L78 30 L80 34 L74 36 C70 38 66 40 62 40 L70 50 L84 52 L84 55 L64 54 L54 44 C44 46 34 46 26 44 L20 52 L8 54 L8 51 L16 48 L14 42 C11 40 10 37 10 34 Z M6 30 C3 30 2 26 4 24 L9 28 Z"/></symbol><symbol id="a-canard" viewBox="0 0 120 60"><path d="M10 34 C20 30 34 28 46 30 L60 32 C66 30 74 30 80 32 L92 30 C96 28 100 28 104 30 L116 32 L104 36 C100 38 94 38 90 38 L78 40 C70 42 58 42 50 40 C38 40 24 40 10 34 Z"/><path d="M50 32 C46 20 36 8 22 2 C30 12 36 22 40 32 Z M64 32 C70 22 82 12 98 6 C90 16 82 26 76 34 Z"/></symbol><symbol id="a-faisan" viewBox="0 0 130 50"><path d="M2 22 C20 22 40 24 56 26 C62 22 72 20 82 22 C88 22 94 20 98 16 C102 14 106 15 108 18 L114 20 L108 22 C104 26 100 30 94 32 C86 36 74 36 64 34 C50 32 26 28 2 22 Z"/><path d="M70 24 C66 14 58 6 46 2 C54 10 58 18 60 26 Z M80 24 C86 14 96 8 108 6 C100 12 94 20 90 28 Z"/></symbol></defs></svg></div>
   <div class="core">
     <div class="reticle" aria-hidden="true">
       <svg viewBox="0 0 210 210"><circle class="ring" cx="105" cy="105" r="96"/>
@@ -942,6 +954,13 @@ details.especes-list p { margin: 0; font-size: 14px; line-height: 1.5; }
   ul.innerHTML = ESP.map(e => '<li>' + e + '</li>').join(''); ul.style.setProperty('--n', ESP.length - 1);
   const line = ESP.join('   ·   ') + '   ·   '; sp.querySelector('.rows').innerHTML = Array.from({ length: 9 }, () => '<div>' + line + line + '</div>').join('');
   sp.querySelector('h1').innerHTML = ['Carnet', 'de', 'battue'].map((w, i) => '<span style="animation-delay:' + (2.05 + i * .12) + 's">' + w + '</span>').join('');
+  // les animaux qui traversent en fond : [espèce, haut en %, largeur en px, durée s, départ s, sens, opacité]
+  const HERD = [['sanglier', 70, 150, 2.6, 0, 0, .26], ['cerf', 58, 130, 2.9, .25, 1, .2], ['chevreuil', 82, 100, 2.3, .55, 0, .24], ['renard', 88, 120, 2.4, 1.0, 1, .22],
+    ['lievre', 64, 80, 2.0, 1.3, 0, .2], ['canard', 12, 110, 3.0, .1, 1, .2], ['faisan', 24, 120, 2.7, .7, 0, .18], ['cerf', 40, 90, 3.2, 1.5, 0, .12], ['sanglier', 92, 110, 2.5, 1.9, 1, .18]];
+  const VB = { sanglier: [120, 64], cerf: [120, 126], chevreuil: [100, 80], renard: [120, 56], lievre: [90, 56], canard: [120, 60], faisan: [130, 50] };
+  sp.querySelector('.herd').insertAdjacentHTML('beforeend', HERD.map(([a, top, w, d, t, rtl, o]) => { const [vw, vh] = VB[a];
+    return '<div class="run' + (rtl ? ' rtl' : '') + '" style="top:' + top + '%;width:' + w + 'px;height:' + (w * vh / vw).toFixed(0) + 'px;margin-top:-' + (w * vh / vw / 2).toFixed(0) + 'px;animation-duration:' + d + 's;animation-delay:' + t + 's;--o:' + o + '">' +
+      '<svg viewBox="0 0 ' + vw + ' ' + vh + '"><g class="gait' + (a === 'canard' || a === 'faisan' ? ' fly' : '') + '" style="animation-delay:-' + (t % .34).toFixed(2) + 's"><use href="#a-' + a + '"/></g></svg></div>'; }).join(''));
   // courbes de niveau tracées à la volée
   const svg = sp.querySelector('.topo'), W = innerWidth, H = innerHeight; svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   const hills = [[W * .22, H * .2], [W * .85, H * .78], [W * .5, H * .52]];
